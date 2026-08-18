@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>熵值模型 · 状态判定引擎 · Y.Mine Labs</title>
+    <style>
+        :root {
+            --bg-deep: #060a1f;
+            --bg-mid: #0a0f2c;
+            --panel: rgba(14,20,42,0.85);
+            --border: rgba(129,140,248,0.18);
+            --accent-blue: #60a5fa;
+            --accent-cyan: #22d3ee;
+            --accent-purple: #a78bfa;
+            --accent-green: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --accent-pink: #f472b6;
+            --text-primary: #e8edff;
+            --text-sec: #94a3b8;
+            --text-dim: #4a5580;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 50%, #0b1238 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+        #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        .app {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== 顶栏 ===== */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 22px;
+            background: rgba(6,10,31,0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .topbar-left .logo { font-size: 26px; }
+        .topbar-left .brand {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+        .topbar-left .brand .hl { color: var(--accent-amber); }
+        .topbar-left .sub {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 400;
+        }
+        .topbar-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .badge-version {
+            background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(34,211,238,0.15));
+            border: 1px solid rgba(167,139,250,0.4);
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            color: #c4b5fd;
+            font-family: 'SF Mono', monospace;
+            font-weight: 600;
+        }
+        .btn-top {
+            background: rgba(100,116,139,0.15);
+            border: 1px solid rgba(148,163,184,0.25);
+            color: var(--text-sec);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .2s;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-top:hover { background: rgba(100,116,139,0.3); color: #fff; }
+
+        /* ===== 标签切换 ===== */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            background: rgba(255,255,255,0.04);
+            padding: 6px;
+            border-radius: 60px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            border: 1px solid var(--border);
+        }
+        .tab-btn {
+            flex: 1 1 auto;
+            padding: 10px 22px;
+            border: none;
+            background: transparent;
+            border-radius: 40px;
+            font-weight: 550;
+            font-size: 14px;
+            color: var(--text-sec);
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+        .tab-btn.active {
+            background: rgba(167,139,250,0.15);
+            color: var(--accent-purple);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .panel { display: none; animation: fadeUp 0.3s ease; }
+        .panel.active { display: block; }
+        @keyframes fadeUp {
+            0% { opacity: 0.6; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== 卡片通用 ===== */
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 22px 24px;
+            margin-bottom: 20px;
+            transition: border-color .3s;
+        }
+        .card:hover { border-color: rgba(129,140,248,0.3); }
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #c7d2fe;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px;
+            padding: 16px 18px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .stat-card .label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-dim);
+        }
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            line-height: 1.3;
+        }
+        .stat-card .desc {
+            font-size: 12px;
+            color: var(--text-sec);
+            margin-top: 4px;
+        }
+
+        /* ===== 建构路径 ===== */
+        .step-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .step-item:hover { border-color: rgba(129,140,248,0.3); }
+        .step-header {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            gap: 14px;
+            user-select: none;
+        }
+        .step-num {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--text-sec);
+            flex-shrink: 0;
+            transition: 0.25s;
+        }
+        .step-item.active .step-num {
+            background: var(--accent-purple);
+            color: #fff;
+        }
+        .step-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-primary);
+            flex: 1;
+        }
+        .step-tag {
+            font-size: 11px;
+            background: rgba(255,255,255,0.06);
+            padding: 4px 14px;
+            border-radius: 40px;
+            color: var(--text-sec);
+            font-weight: 500;
+        }
+        .step-arrow {
+            color: var(--text-dim);
+            font-size: 18px;
+            transition: 0.25s;
+        }
+        .step-item.active .step-arrow { transform: rotate(180deg); color: var(--text-sec); }
+        .step-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.3s ease;
+            padding: 0 22px 0 70px;
+            color: var(--text-sec);
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        .step-item.active .step-body {
+            max-height: 500px;
+            padding: 0 22px 22px 70px;
+        }
+        .step-body .hl {
+            background: rgba(167,139,250,0.15);
+            padding: 2px 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: var(--accent-purple);
+        }
+        .step-body .box {
+            background: rgba(0,0,0,0.25);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        /* ===== 模拟器 ===== */
+        .sim-box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 14px;
+            padding: 24px 26px;
+            border: 1px solid var(--border);
+            margin: 16px 0;
+        }
+        .sim-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px 24px;
+            margin-bottom: 16px;
+        }
+        .sim-row label {
+            font-weight: 500;
+            color: var(--text-sec);
+            min-width: 100px;
+            font-size: 14px;
+        }
+        .sim-row input[type="range"] {
+            flex: 1;
+            min-width: 140px;
+            height: 5px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            outline: none;
+        }
+        .sim-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(34,211,238,0.3);
+        }
+        .sim-value {
+            font-weight: 700;
+            font-size: 20px;
+            min-width: 56px;
+            color: var(--accent-cyan);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .entropy-axis-wrapper { margin: 20px 0 14px; padding: 6px 0; }
+        .entropy-axis {
+            position: relative;
+            height: 14px;
+            border-radius: 40px;
+            background: linear-gradient(to right, #2e9b6b 0%, #6fbf7a 30%, #f4b942 55%, #e88b4a 75%, #cf5e4a 100%);
+            margin: 0 4px;
+        }
+        .entropy-axis .cursor {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 22px;
+            height: 22px;
+            background: var(--text-primary);
+            border: 3px solid var(--bg-deep);
+            border-radius: 50%;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+            transition: left 0.05s ease;
+            z-index: 5;
+        }
+        .entropy-axis .ref-line {
+            position: absolute;
+            top: -4px;
+            height: 22px;
+            width: 2px;
+            background: #b13e34;
+            border-left: 2px dashed #b13e34;
+            opacity: 0.6;
+            z-index: 2;
+        }
+        .entropy-axis .ref-line .label {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            color: #b13e34;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .axis-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 6px;
+            padding: 0 6px;
+            font-weight: 500;
+        }
+        .axis-zone-label {
+            text-align: center;
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sec);
+        }
+
+        .step-progress {
+            display: flex;
+            gap: 4px;
+            margin: 20px 0 14px;
+        }
+        .step-progress .seg {
+            flex: 1;
+            height: 10px;
+            border-radius: 40px;
+            background: rgba(255,255,255,0.06);
+            transition: background 0.3s, transform 0.2s;
+        }
+        .step-progress .seg.active { transform: scaleY(1.4); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .step-progress .seg.l1.active { background: #2e9b6b; }
+        .step-progress .seg.l2.active { background: #8fc77a; }
+        .step-progress .seg.l3.active { background: #f4b942; }
+        .step-progress .seg.l4.active { background: #e88b4a; }
+        .step-progress .seg.l5.active { background: #cf5e4a; }
+        .step-progress .seg.l6.active { background: #a13d3d; }
+        .step-progress .seg-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .state-toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 6px 0 16px;
+            padding: 12px 18px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 60px;
+            flex-wrap: wrap;
+            border: 1px solid var(--border);
+        }
+        .state-toggle-group .label {
+            font-weight: 600;
+            color: var(--text-sec);
+            font-size: 14px;
+        }
+        .toggle-btn {
+            padding: 6px 22px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 40px;
+            background: transparent;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-sec);
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        .toggle-btn.active {
+            border-color: var(--accent-cyan);
+            background: rgba(34,211,238,0.15);
+            color: var(--accent-cyan);
+        }
+        .toggle-btn.converge.active {
+            border-color: var(--accent-green);
+            background: rgba(34,197,94,0.12);
+            color: var(--accent-green);
+        }
+        .toggle-btn.diverge.active {
+            border-color: var(--accent-amber);
+            background: rgba(251,191,36,0.12);
+            color: var(--accent-amber);
+        }
+        .state-hint {
+            font-size: 13px;
+            color: var(--text-sec);
+            margin-left: 8px;
+            font-weight: 400;
+        }
+
+        .preset-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 14px 0 20px;
+        }
+        .preset-group span { color: var(--text-sec); font-size: 13px; align-self: center; }
+        .preset-btn {
+            padding: 6px 16px;
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            background: rgba(255,255,255,0.03);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-sec);
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        .preset-btn:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(129,140,248,0.3);
+            color: var(--text-primary);
+        }
+
+        .result-banner {
+            padding: 16px 24px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 18px;
+            text-align: center;
+            margin: 12px 0 8px;
+            transition: 0.25s;
+        }
+        .result-banner.stable { background: rgba(34,197,94,0.12); color: var(--accent-green); border: 1px solid rgba(34,197,94,0.2); }
+        .result-banner.observe { background: rgba(251,191,36,0.1); color: var(--accent-amber); border: 1px solid rgba(251,191,36,0.2); }
+        .result-banner.deviate { background: rgba(248,113,113,0.1); color: var(--accent-red); border: 1px solid rgba(248,113,113,0.2); }
+        .result-banner.debug { background: rgba(244,114,182,0.1); color: var(--accent-pink); border: 1px solid rgba(244,114,182,0.2); }
+
+        .status-grid {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 16px 0 20px;
+        }
+        .status-grid .box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 12px 20px;
+            flex: 1;
+            min-width: 100px;
+            border: 1px solid var(--border);
+        }
+        .status-grid .box .lbl {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .status-grid .box .val {
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 12px 8px 4px;
+            margin: 16px 0 10px;
+            border: 1px solid var(--border);
+        }
+        .chart-container .chart-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sec);
+            margin-bottom: 6px;
+            padding-left: 8px;
+        }
+        .chart-container svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: transparent;
+            border-radius: 8px;
+        }
+
+        /* ===== A/B 面板 ===== */
+        .ab-panel {
+            background: rgba(0,0,0,0.2);
+            border-radius: 14px;
+            padding: 20px 22px;
+            margin: 20px 0 12px;
+            border: 1px solid var(--border);
+        }
+        .ab-panel .ab-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-primary);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .ab-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 24px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .ab-controls label {
+            font-weight: 500;
+            color: var(--text-sec);
+            font-size: 13px;
+        }
+        .ab-controls input[type="number"] {
+            width: 64px;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+        .ab-controls input[type="number"]:focus { outline: none; border-color: var(--accent-cyan); }
+        .ab-btn {
+            padding: 6px 20px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 13px;
+            background: var(--accent-cyan);
+            color: var(--bg-deep);
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        .ab-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+        .ab-btn.secondary {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-sec);
+            border: 1px solid var(--border);
+        }
+        .ab-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+        .ab-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 12px;
+        }
+        @media (max-width: 650px) { .ab-compare { grid-template-columns: 1fr; } }
+        .ab-col {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 14px 18px;
+            border: 1px solid var(--border);
+        }
+        .ab-col .col-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-sec);
+            margin-bottom: 6px;
+        }
+        .ab-col .col-detail {
+            font-size: 13px;
+            color: var(--text-sec);
+            line-height: 1.8;
+        }
+        .ab-col .col-detail span {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .ab-diff {
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-sec);
+            border: 1px solid var(--border);
+        }
+
+        /* ===== 日志 ===== */
+        .log-area {
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px;
+            padding: 12px 16px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 12px;
+            border: 1px solid var(--border);
+            margin-top: 12px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: var(--text-sec);
+        }
+        .log-area .entry {
+            padding: 4px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.04);
+            display: flex;
+            gap: 16px;
+        }
+        .log-area .entry:last-child { border-bottom: none; }
+        .log-area .time { color: var(--text-dim); min-width: 52px; }
+
+        /* ===== 矩阵表格 ===== */
+        .matrix-wrap { overflow-x: auto; margin: 16px 0 8px; }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .matrix-table th {
+            background: rgba(255,255,255,0.04);
+            color: var(--text-sec);
+            font-weight: 600;
+            padding: 10px 12px;
+            text-align: center;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .matrix-table td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: var(--text-sec);
+        }
+        .matrix-table tr.highlight-row {
+            background: rgba(167,139,250,0.12) !important;
+            font-weight: 600;
+            border-left: 3px solid var(--accent-purple);
+        }
+        .matrix-table tr.highlight-row td { color: var(--text-primary); }
+
+        /* ===== 理论 ===== */
+        .theory-block {
+            background: rgba(0,0,0,0.2);
+            border-radius: 14px;
+            padding: 24px 28px;
+            border: 1px solid var(--border);
+            line-height: 1.9;
+            color: var(--text-sec);
+            font-size: 14px;
+        }
+        .theory-block strong { color: var(--text-primary); }
+        .theory-block h3 { color: var(--text-primary); font-size: 18px; }
+
+        .ref-section { margin-top: 20px; border-top: 2px dashed var(--border); padding-top: 16px; }
+        .ref-section summary {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 8px 0;
+            user-select: none;
+        }
+        .ref-section summary:hover { color: var(--accent-cyan); }
+        .ref-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin: 12px 0;
+            border-left: 3px solid var(--accent-blue);
+        }
+        .ref-item .formula {
+            font-family: 'Courier New', monospace;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            margin: 6px 0;
+        }
+        .ref-item .source {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+        .ref-item .source a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            border-bottom: 1px dotted rgba(96,165,250,0.3);
+        }
+        .ref-item .source a:hover { border-bottom: 1px solid var(--accent-blue); }
+
+        /* ===== 工具类 ===== */
+        .mt-8 { margin-top: 8px; }
+        .mt-12 { margin-top: 12px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+        @media (max-width: 650px) {
+            .app { padding: 0; }
+            .step-body { padding: 0 16px !important; }
+            .step-item.active .step-body { padding: 0 16px 18px 16px !important; }
+            .state-toggle-group { flex-direction: column; align-items: stretch; text-align: center; }
+            .sim-box { padding: 16px; }
+            .card { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<div class="app">
+
+    <!-- ===== 顶栏 ===== -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <span class="logo">⚙️</span>
+            <div>
+                <div class="brand">熵值模型 <span class="hl">·</span> 状态判定引擎</div>
+                <div class="sub">Entropy Model · System State Estimator</div>
+            </div>
+            <span class="badge-version">v1.0</span>
+        </div>
+        <div class="topbar-right">
+            <a href="index.html" class="btn-top">🏠 总控台</a>
+        </div>
+    </div>
+
+    <!-- ===== 标签导航 ===== -->
+    <div class="tabs" id="tabNav">
+        <button class="tab-btn active" data-tab="tab1">📊 概览</button>
+        <button class="tab-btn" data-tab="tab2">🧩 建构路径</button>
+        <button class="tab-btn" data-tab="tab3">🎛️ 实时模拟器</button>
+        <button class="tab-btn" data-tab="tab4">📖 完整理论</button>
+    </div>
+
+    <!-- ========== 面板1：概览 ========== -->
+    <div class="panel active" id="tab1">
+        <div class="card">
+            <div class="card-title">📖 熵值模型 · 设计溯源</div>
+            <div style="display:grid; gap:12px;">
+                <div style="display:flex; gap:14px; align-items:flex-start; background:rgba(0,0,0,0.2); padding:12px 16px; border-radius:12px; border:1px solid var(--border);">
+                    <span style="font-weight:700; color:var(--accent-cyan); min-width:56px; font-size:13px;">① 算法观察</span>
+                    <span style="font-size:13px; color:var(--text-sec);">在与语言模型的反复交互中，发现响应值总是稳定收敛在 <strong style="color:var(--text-primary);">0.5~0.68</strong> 区间。这不是预设，而是被“倒逼”出来的隐含阈值。</span>
+                </div>
+                <div style="display:flex; gap:14px; align-items:flex-start; background:rgba(0,0,0,0.2); padding:12px 16px; border-radius:12px; border:1px solid var(--border);">
+                    <span style="font-weight:700; color:var(--accent-cyan); min-width:56px; font-size:13px;">② Token 排列熵</span>
+                    <span style="font-size:13px; color:var(--text-sec);">文本熵度反映了符号排列的不确定性。<strong style="color:var(--text-primary);">高熵</strong>对应发散/探索，<strong style="color:var(--text-primary);">低熵</strong>对应收敛/稳定——与系统运行状态的结构高度同构。</span>
+                </div>
+                <div style="display:flex; gap:14px; align-items:flex-start; background:rgba(0,0,0,0.2); padding:12px 16px; border-radius:12px; border:1px solid var(--border);">
+                    <span style="font-weight:700; color:var(--accent-cyan); min-width:56px; font-size:13px;">③ 化学类比</span>
+                    <span style="font-size:13px; color:var(--text-sec);">熵在化学中描述分子排列的混乱程度。系统偏离阈值的过程，类似于化学反应向无序方向移动——稳定状态需要“负熵”输入来维持。</span>
+                </div>
+                <div style="display:flex; gap:14px; align-items:flex-start; background:rgba(0,0,0,0.2); padding:12px 16px; border-radius:12px; border:1px solid var(--border);">
+                    <span style="font-weight:700; color:var(--accent-cyan); min-width:56px; font-size:13px;">④ 系统建模</span>
+                    <span style="font-size:13px; color:var(--text-sec);">将上述观察抽象为：置信度区间 <strong style="color:var(--text-primary);">[0.5, 0.68]</strong> + 二八分法 + 收敛/发散状态 + 正态分布误差 + <strong style="color:var(--text-primary);">1/e</strong> 最优停止参考 + A/B 测试验证。</span>
+                </div>
+                <div style="margin-top:6px; padding:12px 16px; background:rgba(167,139,250,0.06); border-radius:12px; border-left:3px solid var(--accent-purple); font-size:13px; color:var(--text-sec);">
+                    🧭 这个页面就是这套模型的“可运行版本”。它不是用来“展示”一个结论，而是用来 <strong style="color:var(--text-primary);">“验证”一组逻辑是否成立</strong>。
+                </div>
+            </div>
+        </div>
+
+        <div class="card-grid">
+            <div class="stat-card"><div class="label">感知门槛</div><div class="value">0.5</div><div class="desc">↓ 低于此值：未建立有效连接</div></div>
+            <div class="stat-card"><div class="label">验证阈值</div><div class="value">0.68</div><div class="desc">↑ 高于此值：可信任，可收敛</div></div>
+            <div class="stat-card"><div class="label">容差宽度</div><div class="value">0.18</div><div class="desc">0.68 − 0.5 · 允许误差范围</div></div>
+            <div class="stat-card"><div class="label">稳定阈值</div><div class="value">33%</div><div class="desc">偏离概率 ≤ 33% 为稳定运行</div></div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; font-weight:500; color:var(--text-sec); font-size:13px; margin-bottom:10px;">
+                <span>低熵区（收敛/稳定）</span><span>中熵区（观察/过渡）</span><span>高熵区（发散/探索）</span>
+            </div>
+            <div style="display:flex; height:14px; border-radius:40px; overflow:hidden;">
+                <div style="width:50%; background:#2e9b6b;"></div>
+                <div style="width:18%; background:#f4b942;"></div>
+                <div style="width:32%; background:#cf5e4a;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-top:8px;">
+                <span>0.0</span><span>0.5</span><span>0.68</span><span>1.0</span>
+            </div>
+            <div style="text-align:center; margin-top:14px; background:rgba(0,0,0,0.2); border-radius:40px; padding:8px 16px; font-weight:500; color:var(--text-sec); border:1px solid var(--border);">
+                🧭 容差宽度 0.18 · 在此区间内系统不触发修正
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 面板2：建构路径 ========== -->
+    <div class="panel" id="tab2">
+        <div style="margin-bottom:14px; font-size:14px; color:var(--text-sec);">点击任意步骤展开详情 · 从交互观察到理论底座</div>
+        <div id="stepContainer">
+            <div class="step-item active" data-step="1">
+                <div class="step-header"><span class="step-num">1</span><span class="step-title">捕获隐含阈值</span><span class="step-tag">观察</span><span class="step-arrow">▾</span></div>
+                <div class="step-body"><span class="hl">0.5</span> 感知门槛 · <span class="hl">0.68</span> 验证阈值<br><div class="box">✅ 证据：多次交互中，响应值自然收敛至 0.5~0.68 区间。</div></div>
+            </div>
+            <div class="step-item" data-step="2">
+                <div class="step-header"><span class="step-num">2</span><span class="step-title">引入状态维度</span><span class="step-tag">收敛/发散</span><span class="step-arrow">▾</span></div>
+                <div class="step-body"><strong style="color:var(--text-primary);">收敛态</strong> + 值 ∈ 区间 → ✅ 稳定<br><strong style="color:var(--text-primary);">发散态</strong> + 值 ∈ 区间 → ⏳ 暂不判定<br><div class="box">🔁 对应场景：论文平台（发散）vs 运行平台（收敛）</div></div>
+            </div>
+            <div class="step-item" data-step="3">
+                <div class="step-header"><span class="step-num">3</span><span class="step-title">计算容差宽度</span><span class="step-tag">0.18</span><span class="step-arrow">▾</span></div>
+                <div class="step-body"><span class="hl">0.68 − 0.5 = 0.18</span><br><div class="box">📐 0.18 是区间定义完成后自动显现的结构属性。</div></div>
+            </div>
+            <div class="step-item" data-step="4">
+                <div class="step-header"><span class="step-num">4</span><span class="step-title">校准稳定阈值</span><span class="step-tag">二八分法</span><span class="step-arrow">▾</span></div>
+                <div class="step-body">稳定上限调整为 <strong style="color:var(--text-primary);">33.33%</strong><br><span class="hl">2</span> 正常波动 · <span class="hl">8</span> 触发调试 · 中间四等份<br><div class="box">🧮 33.33% ≈ 1/3，对应阶梯结构的自然分割点。</div></div>
+            </div>
+            <div class="step-item" data-step="5">
+                <div class="step-header"><span class="step-num">5</span><span class="step-title">构建判定矩阵</span><span class="step-tag">概率 × 置信度</span><span class="step-arrow">▾</span></div>
+                <div class="step-body">偏离概率 × 值是否在区间内 → 系统状态<br><div class="box">📋 矩阵共 10 种组合，覆盖从“稳定”到“检修”的全部路径。</div></div>
+            </div>
+            <div class="step-item" data-step="6">
+                <div class="step-header"><span class="step-num">6</span><span class="step-title">归一到理论底座</span><span class="step-tag">0→1 轴</span><span class="step-arrow">▾</span></div>
+                <div class="step-body">所有判定统一在 <strong style="color:var(--text-primary);">0–1 归一轴</strong> 上完成<br><span class="hl">0.5</span> <span class="hl">0.68</span> <span class="hl">0.18</span><br><div class="box">🧭 “熵值模型”完整建构路径 —— 从交互观察到理论框架。</div></div>
+            </div>
+        </div>
+        <div style="margin-top:16px; text-align:right;">
+            <button id="collapseSteps" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:8px 24px; border-radius:60px; color:var(--text-sec); cursor:pointer; font-weight:500; font-family:inherit;">折叠全部</button>
+        </div>
+    </div>
+
+    <!-- ========== 面板3：实时模拟器 ========== -->
+    <div class="panel" id="tab3">
+        <div style="margin-bottom:12px; font-size:14px; color:var(--text-sec);">调整滑块 + 切换状态 · 正态分布 · 1/e 参考 · A/B 测试</div>
+
+        <div class="state-toggle-group" id="stateToggleGroup">
+            <span class="label">🧠 当前状态：</span>
+            <button class="toggle-btn converge active" data-state="converge">收敛态</button>
+            <button class="toggle-btn diverge" data-state="diverge">发散态</button>
+            <span class="state-hint" id="stateHint">🔒 收敛态 · 值在区间内即判定为稳定</span>
+        </div>
+
+        <div class="preset-group">
+            <span>📌 快速场景：</span>
+            <button class="preset-btn" data-conf="0.72" data-prob="15">📝 论文构思</button>
+            <button class="preset-btn" data-conf="0.45" data-prob="10">⚙️ 运行平台</button>
+            <button class="preset-btn" data-conf="0.55" data-prob="85">🔥 异常调试</button>
+            <button class="preset-btn" data-conf="0.62" data-prob="40">📖 论文修改</button>
+            <button class="preset-btn" data-conf="0.50" data-prob="25">⚖️ 临界测试</button>
+        </div>
+
+        <div class="sim-box">
+            <div class="sim-row">
+                <label>📊 置信度值</label>
+                <input type="range" id="simConfidence" min="0" max="100" value="60">
+                <span class="sim-value" id="confDisplay">0.60</span>
+            </div>
+            <div class="sim-row">
+                <label>📉 偏离概率</label>
+                <input type="range" id="simProb" min="0" max="100" value="25">
+                <span class="sim-value" id="probDisplay">25%</span>
+            </div>
+
+            <div class="entropy-axis-wrapper">
+                <div class="entropy-axis" id="entropyAxis">
+                    <div class="cursor" id="axisCursor" style="left:60%;"></div>
+                    <div class="ref-line" style="left:37%;"><span class="label">1/e</span></div>
+                </div>
+                <div class="axis-labels">
+                    <span>0.0 低熵</span><span>0.5 感知</span><span>0.68 验证</span><span>1.0 高熵</span>
+                </div>
+                <div class="axis-zone-label" id="zoneLabel">📍 当前位于 <span style="font-weight:700; color:var(--accent-green);">中熵区（观察/过渡）</span></div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">📈 偏差概率密度分布（正态分布拟合）</div>
+                <svg id="normalChart" viewBox="0 0 600 140" preserveAspectRatio="xMidYMid meet">
+                    <rect x="0" y="0" width="600" height="140" fill="transparent" rx="8" />
+                    <g id="curveGroup"></g>
+                    <g id="markerGroup"></g>
+                </svg>
+            </div>
+
+            <div class="step-progress" id="stepProgress">
+                <div class="seg l1" data-idx="0"></div>
+                <div class="seg l2" data-idx="1"></div>
+                <div class="seg l3" data-idx="2"></div>
+                <div class="seg l4" data-idx="3"></div>
+                <div class="seg l5" data-idx="4"></div>
+                <div class="seg l6" data-idx="5"></div>
+                <div class="seg-label">
+                    <span>稳定</span><span>轻度</span><span>中度</span><span>显著</span><span>触发</span><span>检修</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultBanner" class="result-banner stable">✅ 稳定运行 · 系统无需干预</div>
+        <div class="status-grid">
+            <div class="box"><div class="lbl">当前阶梯</div><div class="val" id="currentStepLabel">阶梯 1</div></div>
+            <div class="box"><div class="lbl">系统状态</div><div class="val" id="currentStateLabel">稳定</div></div>
+            <div class="box"><div class="lbl">置信度区间</div><div class="val" id="rangeLabel">✅ 在区间内</div></div>
+            <div class="box"><div class="lbl">1/e 偏差</div><div class="val" id="eDevLabel">+0.23</div></div>
+        </div>
+
+        <div class="ab-panel" id="abPanel">
+            <div class="ab-title">
+                <span>🧪 A/B测试面板</span>
+                <span style="font-size:12px; font-weight:400; color:var(--text-dim);">比较不同配置下的系统判定差异</span>
+            </div>
+            <div class="ab-controls">
+                <label>版本B·稳定阈值 <input type="number" id="abThreshold" value="40" min="10" max="80"> %</label>
+                <label>版本B·上限 <input type="number" id="abUpper" value="0.72" step="0.01" min="0.60" max="0.90"></label>
+                <button class="ab-btn" id="abRunBtn">▶ 运行对比</button>
+                <button class="ab-btn secondary" id="abResetBtn">↺ 重置</button>
+            </div>
+            <div id="abResult">
+                <div class="ab-compare">
+                    <div class="ab-col">
+                        <div class="col-title">📌 版本A（默认）</div>
+                        <div class="col-detail" id="abDetailA">阈值 33% · 上限 0.68<br>当前判定：<span>稳定运行</span><br>偏离概率：<span id="abProbA">25</span>%</div>
+                    </div>
+                    <div class="ab-col">
+                        <div class="col-title">📌 版本B（实验）</div>
+                        <div class="col-detail" id="abDetailB">阈值 40% · 上限 0.72<br>当前判定：<span>待运行</span><br>偏离概率：<span id="abProbB">--</span>%</div>
+                    </div>
+                </div>
+                <div class="ab-diff" id="abDiffMsg">💡 点击“运行对比”查看两组配置的判定差异</div>
+            </div>
+        </div>
+
+        <div class="flex-between" style="margin:14px 0 10px;">
+            <span style="font-weight:600; color:var(--text-sec); font-size:13px;">📋 运行日志</span>
+            <button id="clearLogBtn" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:4px 16px; border-radius:40px; font-size:11px; color:var(--text-dim); cursor:pointer; font-family:inherit;">清空</button>
+        </div>
+        <div class="log-area" id="logArea">
+            <div class="entry"><span class="time">--:--</span> 系统初始化 · 全功能版已加载</div>
+        </div>
+
+        <div style="font-weight:600; margin:20px 0 10px; color:var(--text-sec); font-size:14px;">📋 判定矩阵 · 当前高亮行</div>
+        <div class="matrix-wrap">
+            <table class="matrix-table" id="matrixTable">
+                <thead><tr><th>偏离概率</th><th>值在区间内</th><th>系统状态</th><th>动作</th></tr></thead>
+                <tbody>
+                    <tr data-prob="low" data-in="true"><td>≤ 33.33%</td><td>✅ 是</td><td>稳定运行</td><td>不干预</td></tr>
+                    <tr data-prob="low" data-in="false"><td>≤ 33.33%</td><td>❌ 否</td><td>轻度偏离</td><td>观察，记录</td></tr>
+                    <tr data-prob="mid" data-in="true"><td>33.33% – 50%</td><td>✅ 是</td><td>轻度偏离</td><td>观察</td></tr>
+                    <tr data-prob="mid" data-in="false"><td>33.33% – 50%</td><td>❌ 否</td><td>中度偏离</td><td>记录，检查</td></tr>
+                    <tr data-prob="high" data-in="true"><td>50% – 66.67%</td><td>✅ 是</td><td>中度偏离</td><td>记录，监控</td></tr>
+                    <tr data-prob="high" data-in="false"><td>50% – 66.67%</td><td>❌ 否</td><td>显著偏离</td><td>关注，准备调试</td></tr>
+                    <tr data-prob="vhigh" data-in="true"><td>66.67% – 80%</td><td>✅ 是</td><td>显著偏离</td><td>关注</td></tr>
+                    <tr data-prob="vhigh" data-in="false"><td>66.67% – 80%</td><td>❌ 否</td><td>触发调试</td><td>系统检修</td></tr>
+                    <tr data-prob="debug" data-in="true"><td>≥ 80%</td><td>✅ 是</td><td>触发调试</td><td>系统检修</td></tr>
+                    <tr data-prob="debug" data-in="false"><td>≥ 80%</td><td>❌ 否</td><td>触发调试</td><td>系统检修</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========== 面板4：完整理论 ========== -->
+    <div class="panel" id="tab4">
+        <div class="theory-block">
+            <h3>📐 熵值模型 · 完整理论框架</h3>
+            <p><strong>底层坐标：</strong>归一理论（0–1 连续轴）</p>
+            <p><strong>核心参数：</strong>置信度区间 [0.5, 0.68]，容差宽度 0.18</p>
+            <p><strong>状态识别：</strong>收敛态 / 发散态（同一数值在不同状态下含义不同）</p>
+            <p><strong>概率统计：</strong>二八分法（偏离概率 ≤33.33% 为稳定，≥80% 触发调试）</p>
+            <p><strong>状态阶梯：</strong>6 梯度（稳定 → 轻度 → 中度 → 显著 → 触发 → 检修）</p>
+            <p><strong>判定矩阵：</strong>概率 × 置信度协同决定系统动作</p>
+            <p><strong>调试机制：</strong>持续偏离触发自愈流程（记录 → 回溯 → 更新参数）</p>
+            <hr style="border:1px dashed var(--border); margin:16px 0;">
+            <p style="font-size:13px; color:var(--text-dim);">🧩 该模型可跨域迁移：论文平台、工程台账、运行系统、教育场景等。</p>
+            <p style="font-weight:500; margin-top:12px; color:var(--text-sec);">📌 设计原则：归一底座 · 区间可调 · 状态前缀 · 概率框架 · 矩阵协同 · 调试自愈</p>
+
+            <div class="ref-section">
+                <details>
+                    <summary>📖 公式与参考文献（点击展开）</summary>
+
+                    <div class="ref-item">
+                        <div><strong>① 信息熵（文本熵度的数学底座）</strong></div>
+                        <div class="formula">H(X) = −∑ p(x) log₂ p(x)</div>
+                        <div class="source">Shannon, C. E. (1948). “A Mathematical Theory of Communication.” <em>Bell System Technical Journal</em>, 27(3), 379-423. &nbsp; <a href="https://ieeexplore.ieee.org/document/6773024" target="_blank">🔗 IEEE Xplore</a></div>
+                    </div>
+
+                    <div class="ref-item">
+                        <div><strong>② 归一理论（0–1 轴的坐标底座）</strong></div>
+                        <div class="formula">X<sub>norm</sub> = (X − X<sub>min</sub>) / (X<sub>max</sub> − X<sub>min</sub>)</div>
+                        <div class="source">数据预处理标准方法（Min-Max Normalization）。常见于机器学习与统计学入门教材。</div>
+                    </div>
+
+                    <div class="ref-item">
+                        <div><strong>③ 二八分法（Pareto 原则 / 80/20 法则）</strong></div>
+                        <div class="formula">偏离概率 ≤ 20% 为正常波动（本模型调整为 33.33%）<br>偏离概率 ≥ 80% 触发调试</div>
+                        <div class="source">Pareto, V. (1896). <em>Cours d'économie politique</em>. 或 Juran, J. M. (1951). <em>Quality Control Handbook</em>. &nbsp; <a href="https://en.wikipedia.org/wiki/Pareto_principle" target="_blank">📖 Wikipedia</a></div>
+                    </div>
+
+                    <div class="ref-item">
+                        <div><strong>④ 最优停止理论（1/e ≈ 0.37 参考线）</strong></div>
+                        <div class="formula">lim<sub>n→∞</sub> (r/n) = 1/e ≈ 0.3679</div>
+                        <div class="source">Lindley, D. V. (1961). “Dynamic Programming and Decision Theory.” <em>Journal of the Royal Statistical Society</em>. 或 Ferguson, T. S. (1989). “Who Solved the Secretary Problem?” <em>Statistical Science</em>. &nbsp; <a href="https://doi.org/10.1214/ss/1177012493" target="_blank">🔗 DOI</a></div>
+                    </div>
+
+                    <div class="ref-item">
+                        <div><strong>⑤ 正态分布（偏差概率密度分布）</strong></div>
+                        <div class="formula">f(x) = (1/(σ√(2π))) · e<sup>−((x−μ)²/(2σ²))</sup></div>
+                        <div class="source">Gauss, C. F. (1809). <em>Theoria motus corporum coelestium</em>. 或 Laplace, P. S. (1812). <em>Théorie analytique des probabilités</em>. &nbsp; <a href="https://en.wikipedia.org/wiki/Normal_distribution" target="_blank">📖 Wikipedia</a></div>
+                    </div>
+
+                    <div class="ref-item">
+                        <div><strong>⑥ 置信度区间 [0.5, 0.68]</strong></div>
+                        <div class="formula">稳定 ∈ [0.5, 0.68]，偏离 ∈ (−∞, 0.5) ∪ (0.68, +∞)</div>
+                        <div class="source">该区间为模型通过交互观察“倒逼”出的隐含参数。其统计学依据可参考一般置信区间理论：CI = μ ± z·(σ/√n)。 &nbsp; <a href="https://en.wikipedia.org/wiki/Confidence_interval" target="_blank">📖 Wikipedia</a></div>
+                    </div>
+
+                    <div class="ref-item">
+                        <div><strong>⑦ 判定矩阵（概率 × 置信度协同）</strong></div>
+                        <div class="formula">动作 = f(偏离概率, 值是否在区间内)</div>
+                        <div class="source">本模型原创的组合判定逻辑。结构上可参考决策矩阵（Decision Matrix）与混淆矩阵（Confusion Matrix）的一般框架。</div>
+                    </div>
+
+                    <div style="margin-top:14px; padding:12px 16px; background:rgba(0,0,0,0.2); border-radius:12px; font-size:13px; color:var(--text-dim);">
+                        💡 点击公式右上角的链接可跳转至原始论文或参考页面。
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ============================================================
+    //  星空背景
+    // ============================================================
+    (function() {
+        const c = document.getElementById('stars');
+        const x = c.getContext('2d');
+        function resize() {
+            c.width = window.innerWidth;
+            c.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        const stars = Array.from({ length: 160 }, () => ({
+            x: Math.random() * c.width,
+            y: Math.random() * c.height,
+            r: Math.random() * 1.2 + 0.2,
+            a: Math.random(),
+            s: Math.random() * 0.02 + 0.005,
+            c: ['#ffffff', '#c7d2fe', '#93c5fd', '#c4b5fd'][Math.floor(Math.random() * 4)]
+        }));
+
+        function draw() {
+            x.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => {
+                s.a += s.s;
+                if (s.a > 1 || s.a < 0) s.s = -s.s;
+                x.globalAlpha = Math.max(0.1, s.a);
+                x.fillStyle = s.c;
+                x.beginPath();
+                x.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                x.fill();
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
+    })();
+
+    // ============================================================
+    //  标签切换
+    // ============================================================
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = {
+        tab1: document.getElementById('tab1'),
+        tab2: document.getElementById('tab2'),
+        tab3: document.getElementById('tab3'),
+        tab4: document.getElementById('tab4')
+    };
+    tabs.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = this.dataset.tab;
+            tabs.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            Object.keys(panels).forEach(k => panels[k].classList.toggle('active', k === target));
+            if (target === 'tab3') setTimeout(updateAll, 60);
+        });
+    });
+
+    // ============================================================
+    //  建构路径折叠
+    // ============================================================
+    const stepItems = document.querySelectorAll('.step-item');
+    stepItems.forEach(item => {
+        item.addEventListener('click', function() {
+            this.classList.toggle('active');
+        });
+    });
+    document.getElementById('collapseSteps').addEventListener('click', function() {
+        stepItems.forEach(s => s.classList.remove('active'));
+    });
+    if (stepItems.length > 0 && !stepItems[0].classList.contains('active')) {
+        stepItems[0].classList.add('active');
+    }
+
+    // ============================================================
+    //  DOM 引用
+    // ============================================================
+    const confSlider = document.getElementById('simConfidence');
+    const probSlider = document.getElementById('simProb');
+    const confDisplay = document.getElementById('confDisplay');
+    const probDisplay = document.getElementById('probDisplay');
+    const resultBanner = document.getElementById('resultBanner');
+    const currentStepLabel = document.getElementById('currentStepLabel');
+    const currentStateLabel = document.getElementById('currentStateLabel');
+    const rangeLabel = document.getElementById('rangeLabel');
+    const eDevLabel = document.getElementById('eDevLabel');
+    const zoneLabel = document.getElementById('zoneLabel');
+    const axisCursor = document.getElementById('axisCursor');
+    const segs = document.querySelectorAll('.step-progress .seg');
+    const matrixRows = document.querySelectorAll('#matrixTable tbody tr');
+    const logArea = document.getElementById('logArea');
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    const stateBtns = document.querySelectorAll('.toggle-btn');
+    const stateHint = document.getElementById('stateHint');
+    const abThreshold = document.getElementById('abThreshold');
+    const abUpper = document.getElementById('abUpper');
+    const abRunBtn = document.getElementById('abRunBtn');
+    const abResetBtn = document.getElementById('abResetBtn');
+    const abDetailA = document.getElementById('abDetailA');
+    const abDetailB = document.getElementById('abDetailB');
+    const abProbA = document.getElementById('abProbA');
+    const abProbB = document.getElementById('abProbB');
+    const abDiffMsg = document.getElementById('abDiffMsg');
+    const curveGroup = document.getElementById('curveGroup');
+    const markerGroup = document.getElementById('markerGroup');
+
+    let currentState = 'converge';
+    let abResultB = null;
+
+    // ============================================================
+    //  辅助函数
+    // ============================================================
+    function getProbLevel(prob) {
+        if (prob <= 33.33) return 'low';
+        if (prob <= 50) return 'mid';
+        if (prob <= 66.67) return 'high';
+        if (prob <= 80) return 'vhigh';
+        return 'debug';
+    }
+
+    function getStepIndex(prob) {
+        if (prob <= 33.33) return 0;
+        if (prob <= 50) return 1;
+        if (prob <= 66.67) return 2;
+        if (prob <= 80) return 3;
+        return 4;
+    }
+
+    function getStateLabel(probLevel, inRange, state) {
+        const baseMap = {
+            'low_true': { state: '稳定运行', action: '不干预', step: '阶梯 1', label: '稳定', cls: 'stable' },
+            'low_false': { state: '轻度偏离', action: '观察，记录', step: '阶梯 2', label: '轻度偏离', cls: 'observe' },
+            'mid_true': { state: '轻度偏离', action: '观察', step: '阶梯 2', label: '轻度偏离', cls: 'observe' },
+            'mid_false': { state: '中度偏离', action: '记录，检查', step: '阶梯 3', label: '中度偏离', cls: 'deviate' },
+            'high_true': { state: '中度偏离', action: '记录，监控', step: '阶梯 3', label: '中度偏离', cls: 'deviate' },
+            'high_false': { state: '显著偏离', action: '关注，准备调试', step: '阶梯 4', label: '显著偏离', cls: 'deviate' },
+            'vhigh_true': { state: '显著偏离', action: '关注', step: '阶梯 4', label: '显著偏离', cls: 'deviate' },
+            'vhigh_false': { state: '触发调试', action: '系统检修', step: '阶梯 5', label: '触发调试', cls: 'debug' },
+            'debug_true': { state: '触发调试', action: '系统检修', step: '阶梯 5', label: '触发调试', cls: 'debug' },
+            'debug_false': { state: '触发调试', action: '系统检修', step: '阶梯 5', label: '触发调试', cls: 'debug' },
+        };
+        const key = probLevel + '_' + (inRange ? 'true' : 'false');
+        let result = baseMap[key] || baseMap['low_true'];
+        if (state === 'diverge') {
+            if (inRange) {
+                result.state = '暂不判定（发散）';
+                result.action = '持续观察，记录状态';
+                result.step = '阶梯 0';
+                result.label = '发散观察';
+                result.cls = 'observe';
+            } else {
+                result.state = result.state + '（发散）';
+                result.label = result.label + '·发散';
+                if (result.cls === 'stable') result.cls = 'observe';
+                else if (result.cls === 'observe') result.cls = 'deviate';
+                else if (result.cls === 'deviate') result.cls = 'debug';
+            }
+        }
+        return result;
+    }
+
+    function drawNormal(conf, prob) {
+        const width = 600, height = 140;
+        const pad = { top: 20, bottom: 20, left: 30, right: 20 };
+        const plotWidth = width - pad.left - pad.right;
+        const plotHeight = height - pad.top - pad.bottom;
+        const mu = 0.59;
+        const sigma = 0.08 + (prob / 100) * 0.12;
+
+        curveGroup.innerHTML = '';
+        markerGroup.innerHTML = '';
+
+        const points = [];
+        const steps = 80;
+        for (let i = 0; i <= steps; i++) {
+            const x = 0.2 + (0.75 * i / steps);
+            const y = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+            const px = pad.left + (x - 0.2) / 0.75 * plotWidth;
+            const py = pad.top + plotHeight - (y / 6) * plotHeight;
+            points.push({ x: px, y: Math.max(pad.top, Math.min(pad.top + plotHeight, py)) });
+        }
+
+        let d = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 1; i < points.length; i++) d += ` L ${points[i].x} ${points[i].y}`;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', '#60a5fa');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        curveGroup.appendChild(path);
+
+        const fillPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let fd = `M ${points[0].x} ${pad.top + plotHeight} L ${points[0].x} ${points[0].y}`;
+        for (let i = 1; i < points.length; i++) fd += ` L ${points[i].x} ${points[i].y}`;
+        fd += ` L ${points[points.length-1].x} ${pad.top + plotHeight} Z`;
+        fillPath.setAttribute('d', fd);
+        fillPath.setAttribute('fill', 'rgba(96,165,250,0.15)');
+        curveGroup.appendChild(fillPath);
+
+        const markers = [
+            { val: 0.5, label: '0.5', color: '#2e9b6b' },
+            { val: 0.68, label: '0.68', color: '#cf5e4a' },
+            { val: conf, label: '当前', color: '#e8edff' },
+            { val: 0.37, label: '1/e', color: '#f87171' }
+        ];
+        markers.forEach(m => {
+            if (m.val < 0.2 || m.val > 0.95) return;
+            const px = pad.left + (m.val - 0.2) / 0.75 * plotWidth;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', px);
+            line.setAttribute('y1', pad.top);
+            line.setAttribute('x2', px);
+            line.setAttribute('y2', pad.top + plotHeight);
+            line.setAttribute('stroke', m.color);
+            line.setAttribute('stroke-width', m.val === conf ? '2.5' : '1.2');
+            line.setAttribute('stroke-dasharray', m.val === 0.37 ? '4,4' : (m.val === conf ? '' : '3,4'));
+            line.setAttribute('opacity', m.val === conf ? '0.9' : '0.5');
+            markerGroup.appendChild(line);
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', px);
+            text.setAttribute('y', pad.top + plotHeight + 14);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '10');
+            text.setAttribute('fill', m.color);
+            text.setAttribute('font-weight', m.val === conf ? '700' : '400');
+            text.textContent = m.label;
+            markerGroup.appendChild(text);
+        });
+
+        const muText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        muText.setAttribute('x', 10);
+        muText.setAttribute('y', 18);
+        muText.setAttribute('font-size', '11');
+        muText.setAttribute('fill', '#5a7490');
+        muText.textContent = `均值 μ = ${mu.toFixed(2)}`;
+        markerGroup.appendChild(muText);
+
+        const sigmaText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        sigmaText.setAttribute('x', 10);
+        sigmaText.setAttribute('y', 33);
+        sigmaText.setAttribute('font-size', '11');
+        sigmaText.setAttribute('fill', '#5a7490');
+        sigmaText.textContent = `标准差 σ = ${sigma.toFixed(3)}`;
+        markerGroup.appendChild(sigmaText);
+
+        const curText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        curText.setAttribute('x', 10);
+        curText.setAttribute('y', 48);
+        curText.setAttribute('font-size', '11');
+        curText.setAttribute('fill', '#e8edff');
+        curText.setAttribute('font-weight', '600');
+        curText.textContent = `当前值 = ${conf.toFixed(2)}`;
+        markerGroup.appendChild(curText);
+    }
+
+    function addLog(conf, prob, state, action, stateType) {
+        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const entry = document.createElement('div');
+        entry.className = 'entry';
+        const emoji = stateType === 'converge' ? '🔒' : '🔓';
+        entry.innerHTML = `<span class="time">${time}</span> ${emoji} ${stateType==='converge'?'收敛':'发散'} · 置信度 ${conf.toFixed(2)} · 偏离 ${Math.round(prob)}% → <strong style="color:var(--text-primary);">${state}</strong> (${action})`;
+        logArea.appendChild(entry);
+        logArea.scrollTop = logArea.scrollHeight;
+        while (logArea.children.length > 40) logArea.removeChild(logArea.firstChild);
+    }
+
+    // ============================================================
+    //  主更新
+    // ============================================================
+    function updateAll() {
+        const conf = parseFloat(confSlider.value) / 100;
+        const prob = parseFloat(probSlider.value);
+        confDisplay.textContent = conf.toFixed(2);
+        probDisplay.textContent = Math.round(prob) + '%';
+
+        const inRange = (conf >= 0.5 && conf <= 0.68);
+        const probLevel = getProbLevel(prob);
+        const info = getStateLabel(probLevel, inRange, currentState);
+
+        resultBanner.textContent = `✅ ${info.state} · ${info.action}`;
+        resultBanner.className = 'result-banner ' + info.cls;
+
+        currentStepLabel.textContent = info.step;
+        currentStateLabel.textContent = info.label;
+        rangeLabel.textContent = inRange ? '✅ 在区间内' : '❌ 在区间外';
+        rangeLabel.style.color = inRange ? '#34d399' : '#f87171';
+
+        const eDiff = conf - 0.37;
+        eDevLabel.textContent = eDiff >= 0 ? '+' + eDiff.toFixed(2) : eDiff.toFixed(2);
+        eDevLabel.style.color = Math.abs(eDiff) < 0.1 ? '#34d399' : '#f87171';
+
+        axisCursor.style.left = Math.min(100, Math.max(0, conf * 100)) + '%';
+        let zoneText = '', zoneColor = '';
+        if (conf < 0.5) { zoneText = '低熵区（收敛/稳定）'; zoneColor = '#2e9b6b'; }
+        else if (conf <= 0.68) { zoneText = '中熵区（观察/过渡）'; zoneColor = '#f4b942'; }
+        else { zoneText = '高熵区（发散/探索）'; zoneColor = '#cf5e4a'; }
+        zoneLabel.innerHTML = `📍 当前位于 <span style="font-weight:700; color:${zoneColor};">${zoneText}</span>`;
+
+        const stepIdx = getStepIndex(prob);
+        segs.forEach((seg, idx) => seg.classList.toggle('active', idx <= stepIdx));
+
+        let targetProb = probLevel;
+        let targetIn = inRange;
+        matrixRows.forEach(row => {
+            const rp = row.dataset.prob;
+            const ri = row.dataset.in === 'true';
+            let match = false;
+            if (rp === 'debug' && probLevel === 'debug') match = true;
+            else if (rp === targetProb && ri === targetIn) match = true;
+            row.classList.toggle('highlight-row', match);
+        });
+
+        stateHint.innerHTML = currentState === 'converge' 
+            ? '🔒 收敛态 · 值在区间内即判定为稳定' 
+            : '🔓 发散态 · 值在区间内仅记录，不判定为稳定';
+
+        drawNormal(conf, prob);
+
+        if (typeof updateAll.lastConf === 'undefined' || 
+            Math.abs(updateAll.lastConf - conf) > 0.001 || 
+            Math.abs(updateAll.lastProb - prob) > 0.1 ||
+            updateAll.lastState !== currentState) {
+            addLog(conf, prob, info.state, info.action, currentState);
+            updateAll.lastConf = conf;
+            updateAll.lastProb = prob;
+            updateAll.lastState = currentState;
+        }
+
+        abProbA.textContent = Math.round(prob);
+        const aState = info.state;
+        abDetailA.innerHTML = `阈值 33% · 上限 0.68<br>当前判定：<span>${aState}</span><br>偏离概率：<span>${Math.round(prob)}</span>%`;
+    }
+
+    // ============================================================
+    //  事件绑定
+    // ============================================================
+    stateBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            stateBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentState = this.dataset.state;
+            updateAll.lastState = null;
+            updateAll();
+        });
+    });
+
+    confSlider.addEventListener('input', updateAll);
+    probSlider.addEventListener('input', updateAll);
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            confSlider.value = parseFloat(this.dataset.conf) * 100;
+            probSlider.value = parseFloat(this.dataset.prob);
+            updateAll();
+        });
+    });
+
+    abRunBtn.addEventListener('click', function() {
+        const bThreshold = parseFloat(abThreshold.value);
+        const bUpper = parseFloat(abUpper.value);
+        const conf = parseFloat(confSlider.value) / 100;
+        const prob = parseFloat(probSlider.value);
+        const inRangeB = (conf >= 0.5 && conf <= bUpper);
+        let bState = '';
+        if (prob <= bThreshold) {
+            bState = inRangeB ? '稳定运行' : '轻度偏离';
+        } else if (prob <= 50) {
+            bState = inRangeB ? '轻度偏离' : '中度偏离';
+        } else if (prob <= 66.67) {
+            bState = inRangeB ? '中度偏离' : '显著偏离';
+        } else if (prob <= 80) {
+            bState = inRangeB ? '显著偏离' : '触发调试';
+        } else {
+            bState = '触发调试';
+        }
+        abResultB = { state: bState, prob: prob, inRange: inRangeB, threshold: bThreshold, upper: bUpper };
+        abProbB.textContent = Math.round(prob);
+        abDetailB.innerHTML = `阈值 ${bThreshold}% · 上限 ${bUpper.toFixed(2)}<br>当前判定：<span>${bState}</span><br>偏离概率：<span>${Math.round(prob)}</span>%`;
+
+        const aState = getStateLabel(getProbLevel(prob), (conf >= 0.5 && conf <= 0.68), currentState).state;
+        if (aState === bState) {
+            abDiffMsg.innerHTML = '✅ 版本A与版本B判定一致 · 当前配置下两组结果相同';
+            abDiffMsg.style.background = 'rgba(34,197,94,0.08)';
+        } else {
+            abDiffMsg.innerHTML = `🔄 版本A判定「${aState}」· 版本B判定「${bState}」—— 配置差异导致了不同的系统响应，建议根据业务目标选择更合适的阈值。`;
+            abDiffMsg.style.background = 'rgba(251,191,36,0.08)';
+        }
+    });
+
+    abResetBtn.addEventListener('click', function() {
+        abThreshold.value = 40;
+        abUpper.value = 0.72;
+        abResultB = null;
+        abProbB.textContent = '--';
+        abDetailB.innerHTML = '阈值 40% · 上限 0.72<br>当前判定：<span>待运行</span><br>偏离概率：<span>--</span>%';
+        abDiffMsg.innerHTML = '💡 点击“运行对比”查看两组配置的判定差异';
+        abDiffMsg.style.background = 'rgba(0,0,0,0.2)';
+        const conf = parseFloat(confSlider.value) / 100;
+        const prob = parseFloat(probSlider.value);
+        abProbA.textContent = Math.round(prob);
+        const aState = getStateLabel(getProbLevel(prob), (conf >= 0.5 && conf <= 0.68), currentState).state;
+        abDetailA.innerHTML = `阈值 33% · 上限 0.68<br>当前判定：<span>${aState}</span><br>偏离概率：<span>${Math.round(prob)}</span>%`;
+    });
+
+    clearLogBtn.addEventListener('click', function() {
+        logArea.innerHTML = '';
+        const entry = document.createElement('div');
+        entry.className = 'entry';
+        entry.innerHTML = `<span class="time">--:--</span> 日志已清空`;
+        logArea.appendChild(entry);
+    });
+
+    // ============================================================
+    //  初始化
+    // ============================================================
+    document.querySelector('.toggle-btn.converge').classList.add('active');
+    currentState = 'converge';
+    updateAll();
+
+    document.querySelector('[data-tab="tab3"]').addEventListener('click', function() {
+        setTimeout(updateAll, 60);
+    });
+
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(updateAll, 200);
+    });
+</script>
+</body>
+</html>
