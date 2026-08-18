@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>归1振荡模拟器 · Y.Mine Labs</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --bg-deep: #060a1f;
+            --bg-mid: #0a0f2c;
+            --panel: rgba(14,20,42,0.85);
+            --border: rgba(129,140,248,0.18);
+            --accent-blue: #60a5fa;
+            --accent-cyan: #22d3ee;
+            --accent-purple: #a78bfa;
+            --accent-green: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --accent-pink: #f472b6;
+            --text-primary: #e8edff;
+            --text-sec: #94a3b8;
+            --text-dim: #4a5580;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 50%, #0b1238 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+        }
+        #stars {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== 顶栏 ===== */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 22px;
+            background: rgba(6,10,31,0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .topbar-left .logo { font-size: 24px; }
+        .topbar-left .brand {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+        .topbar-left .brand .hl { color: var(--accent-amber); }
+        .topbar-left .sub {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 400;
+        }
+        .topbar-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .badge-version {
+            background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(34,211,238,0.15));
+            border: 1px solid rgba(167,139,250,0.4);
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            color: #c4b5fd;
+            font-family: 'SF Mono', monospace;
+            font-weight: 600;
+        }
+        .btn-top {
+            background: rgba(100,116,139,0.15);
+            border: 1px solid rgba(148,163,184,0.25);
+            color: var(--text-sec);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .2s;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-top:hover { background: rgba(100,116,139,0.3); color: #fff; }
+
+        /* ===== 案例选择 ===== */
+        .selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .btn-case {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            color: var(--text-sec);
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-case:hover {
+            border-color: rgba(129,140,248,0.4);
+            color: var(--text-primary);
+        }
+        .btn-case.active {
+            background: rgba(167,139,250,0.12);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(167,139,250,0.1);
+        }
+        .btn-case i { margin-right: 8px; }
+
+        /* ===== 主网格 ===== */
+        .grid-main {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 900px) {
+            .grid-main { grid-template-columns: 1fr; }
+        }
+
+        /* ===== 卡片 ===== */
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px 22px;
+            transition: border-color .3s;
+        }
+        .card:hover { border-color: rgba(129,140,248,0.3); }
+        .card h3 {
+            font-size: 14px;
+            color: var(--text-sec);
+            margin-bottom: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h3 i { color: var(--accent-cyan); }
+
+        .chart-wrapper { position: relative; height: 280px; }
+
+        /* ===== 状态面板 ===== */
+        .status-item { margin-bottom: 14px; }
+        .status-item .label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .status-item .value {
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 4px;
+            color: var(--text-primary);
+        }
+        .status-item .value .small {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--text-sec);
+            margin-left: 6px;
+        }
+        .badge-safe { color: var(--accent-green); }
+        .badge-warn { color: var(--accent-amber); }
+        .badge-danger { color: var(--accent-red); }
+
+        .tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .tag {
+            background: rgba(255,255,255,0.04);
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            color: var(--text-sec);
+        }
+
+        .divider {
+            border-top: 1px solid var(--border);
+            margin: 14px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 4px 0;
+        }
+        .info-row .lbl { color: var(--text-dim); }
+        .info-row .val { color: var(--text-primary); }
+        .info-row .val.danger { color: var(--accent-red); }
+        .info-row .val.warn { color: var(--accent-amber); }
+        .info-row .val.good { color: var(--accent-green); }
+
+        /* ===== 滑块区 ===== */
+        .slider-area {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 18px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+        @media (max-width: 800px) {
+            .slider-area {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+        }
+        .slider-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-sec);
+            margin-bottom: 4px;
+        }
+        .slider-group input {
+            width: 100%;
+            accent-color: var(--accent-cyan);
+            background: rgba(255,255,255,0.06);
+            height: 5px;
+            border-radius: 10px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider-group input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(34,211,238,0.3);
+        }
+        .slider-value {
+            float: right;
+            color: var(--accent-cyan);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* ===== AB测试控制台 ===== */
+        .ab-console {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+        .ab-console .label-ab {
+            color: var(--text-dim);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .btn-ab {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            color: var(--text-sec);
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-weight: 500;
+        }
+        .btn-ab:hover {
+            border-color: rgba(129,140,248,0.4);
+            color: var(--text-primary);
+        }
+        .btn-ab.active-ab {
+            background: rgba(167,139,250,0.12);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+        .btn-ab.active-ab[data-ab="A"] {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            background: rgba(96,165,250,0.08);
+        }
+        .btn-ab.active-ab[data-ab="B"] {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            background: rgba(248,113,113,0.08);
+        }
+        .btn-ab.active-ab[data-ab="compare"] {
+            border-color: var(--accent-amber);
+            color: var(--accent-amber);
+            background: rgba(251,191,36,0.08);
+        }
+
+        .ab-decision {
+            background: rgba(0,0,0,0.25);
+            padding: 6px 16px;
+            border-radius: 40px;
+            border-left: 3px solid var(--accent-cyan);
+            font-size: 13px;
+            color: var(--text-sec);
+            flex: 1;
+            min-width: 150px;
+        }
+        .ab-decision strong { color: var(--accent-cyan); }
+
+        /* ===== 底部三栏 ===== */
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-top: 18px;
+        }
+        @media (max-width: 700px) {
+            .footer-grid { grid-template-columns: 1fr; }
+        }
+        .note-card {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 14px 18px;
+            border-left: 3px solid var(--accent-cyan);
+        }
+        .note-card h4 {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .note-card p {
+            margin-top: 4px;
+            font-size: 13px;
+            color: var(--text-sec);
+            line-height: 1.6;
+        }
+        .note-card .highlight { color: var(--accent-cyan); font-weight: 500; }
+        .note-card:nth-child(2) { border-left-color: var(--accent-purple); }
+        .note-card:nth-child(3) { border-left-color: var(--accent-green); }
+
+        .footer-bottom {
+            text-align: center;
+            padding: 20px 0 10px;
+            font-size: 11px;
+            color: var(--text-dim);
+            font-family: 'SF Mono', monospace;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<div class="container">
+    <!-- ===== 顶栏 ===== -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <span class="logo">📈</span>
+            <div>
+                <div class="brand">归1振荡模拟器 <span class="hl">·</span> A/B测试版</div>
+                <div class="sub">三体耦合 × 检验相似 × 策略对比</div>
+            </div>
+            <span class="badge-version">v1.0</span>
+        </div>
+        <div class="topbar-right">
+            <a href="hub.html" class="btn-top">🏠 总控台</a>
+            <a href="index.html" class="btn-top">👤 简历</a>
+        </div>
+    </div>
+
+    <!-- ===== 案例选择 ===== -->
+    <div class="selector" id="caseSelector">
+        <button class="btn-case active" data-case="ruixing"><i class="fas fa-mug-hot"></i> 瑞幸</button>
+        <button class="btn-case" data-case="xingbake"><i class="fas fa-store"></i> 星巴克</button>
+        <button class="btn-case" data-case="mixue"><i class="fas fa-ice-cream"></i> 蜜雪冰城</button>
+        <button class="btn-case" data-case="aliyun"><i class="fas fa-cloud"></i> 阿里云</button>
+        <button class="btn-case" data-case="tencentcloud"><i class="fas fa-cloud"></i> 腾讯云</button>
+        <button class="btn-case" data-case="aws"><i class="fas fa-cloud"></i> AWS</button>
+    </div>
+
+    <!-- ===== 主网格 ===== -->
+    <div class="grid-main">
+        <!-- 图表 -->
+        <div class="card">
+            <h3><i class="fas fa-chart-line"></i> 归1振荡轨迹（成本/营收比）</h3>
+            <div class="chart-wrapper">
+                <canvas id="oscillationChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 状态面板 -->
+        <div class="card" id="statusPanel">
+            <div>
+                <div class="status-item">
+                    <div class="label">当前成本/营收比（A / B）</div>
+                    <div class="value" id="currentRatio">0.86 / 0.84 <span class="small">模拟值</span></div>
+                </div>
+                <div class="status-item">
+                    <div class="label">归1状态</div>
+                    <div id="statusBadge" style="font-size: 18px; font-weight: 600; color: var(--accent-amber);">⚠️ 紧贴地面飞行</div>
+                </div>
+                <div class="status-item">
+                    <div class="label">核心控制变量</div>
+                    <div class="tag-group" id="controlTags">
+                        <span class="tag">价格 9.9</span>
+                        <span class="tag">规模走量</span>
+                        <span class="tag">时间因子弱</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="divider"></div>
+                <div class="info-row">
+                    <span class="lbl">落地摩擦系数</span>
+                    <span class="val danger" id="frictionValue">极高 (15-25%)</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">回本周期</span>
+                    <span class="val" id="paybackValue">18-24个月</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 滑块区 + AB测试控制台 ===== -->
+    <div class="slider-area">
+        <div class="slider-group">
+            <label>定价权 / 客单价 <span class="slider-value" id="priceLabel">100%</span></label>
+            <input type="range" id="priceSlider" min="50" max="150" value="100">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim);">
+                <span>低价走量</span><span>基准</span><span>品牌溢价</span>
+            </div>
+        </div>
+        <div class="slider-group">
+            <label>固定成本占比 <span class="slider-value" id="costLabel">100%</span></label>
+            <input type="range" id="costSlider" min="50" max="150" value="100">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim);">
+                <span>轻资产</span><span>基准</span><span>重资产</span>
+            </div>
+        </div>
+
+        <!-- AB测试控制台 -->
+        <div class="ab-console">
+            <span class="label-ab"><i class="fas fa-flask"></i> A/B测试</span>
+            <button class="btn-ab active-ab" id="abBtnA" data-ab="A">方案A · 控价</button>
+            <button class="btn-ab" id="abBtnB" data-ab="B">方案B · 降价冲量</button>
+            <button class="btn-ab" id="abBtnCompare" data-ab="compare"><i class="fas fa-code-branch"></i> 对比模式</button>
+            <span class="ab-decision" id="abDecision"><strong>推荐：</strong>方案A（归1风险可控）</span>
+        </div>
+    </div>
+
+    <!-- ===== 底部三栏 ===== -->
+    <div class="footer-grid">
+        <div class="note-card">
+            <h4>归1路径</h4>
+            <p id="pathDesc">低价走量→无限逼近区间，但永远无法稳定进入</p>
+        </div>
+        <div class="note-card">
+            <h4>关键摩擦</h4>
+            <p id="frictionDesc">执行偏差 + 竞品博弈 + 组织熵增</p>
+        </div>
+        <div class="note-card">
+            <h4>检验相似结论</h4>
+            <p id="similarityDesc">该案例已验证归1模型的<span class="highlight">跨域泛化能力</span></p>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        📈 归1振荡模拟器 · Y.Mine Labs · 基于 0.5/0.68 归1区间 · 6 个真实商业案例
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    //  星空背景
+    // ============================================================
+    (function() {
+        const c = document.getElementById('stars');
+        const x = c.getContext('2d');
+        function resize() {
+            c.width = window.innerWidth;
+            c.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        const stars = Array.from({ length: 160 }, () => ({
+            x: Math.random() * c.width,
+            y: Math.random() * c.height,
+            r: Math.random() * 1.2 + 0.2,
+            a: Math.random(),
+            s: Math.random() * 0.02 + 0.005,
+            c: ['#ffffff', '#c7d2fe', '#93c5fd', '#c4b5fd'][Math.floor(Math.random() * 4)]
+        }));
+
+        function draw() {
+            x.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => {
+                s.a += s.s;
+                if (s.a > 1 || s.a < 0) s.s = -s.s;
+                x.globalAlpha = Math.max(0.1, s.a);
+                x.fillStyle = s.c;
+                x.beginPath();
+                x.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                x.fill();
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
+    })();
+
+    // ============================================================
+    //  一、案例数据（含AB两组基础曲线）
+    // ============================================================
+    const caseData = {
+        ruixing: {
+            label: '瑞幸',
+            color: '#6c8cff',
+            ratiosA: [1.20, 1.10, 0.98, 0.92, 0.88, 0.86, 0.85, 0.85, 0.86, 0.87, 0.86, 0.85],
+            ratiosB: [1.30, 1.18, 1.02, 0.88, 0.78, 0.72, 0.70, 0.72, 0.76, 0.80, 0.82, 0.83],
+            currentA: 0.85,
+            currentB: 0.83,
+            statusA: '⚠️ 紧贴地面飞行',
+            statusB: '⚠️ 波动加剧，风险上升',
+            statusClassA: 'badge-warn',
+            statusClassB: 'badge-danger',
+            tags: ['价格 9.9', '规模走量', '时间因子弱'],
+            friction: '极高 (15-25%)',
+            payback: '18-24个月',
+            path: '低价走量→无限逼近归1，但抗扰动裕度为零',
+            frictionDesc: '价格锁死 + 租金刚性 + 竞品博弈',
+            similarity: '验证了"归1吸引子"的真实存在，但暴露了低维控制变量的极限'
+        },
+        xingbake: {
+            label: '星巴克',
+            color: '#81c995',
+            ratiosA: [0.72, 0.69, 0.66, 0.64, 0.62, 0.61, 0.60, 0.59, 0.59, 0.58, 0.58, 0.59],
+            ratiosB: [0.75, 0.72, 0.68, 0.65, 0.63, 0.62, 0.63, 0.64, 0.66, 0.67, 0.68, 0.69],
+            currentA: 0.59,
+            currentB: 0.69,
+            statusA: '✅ 稳定在安全区内',
+            statusB: '⚠️ 逼近上界，需关注',
+            statusClassA: 'badge-safe',
+            statusClassB: 'badge-warn',
+            tags: ['空间溢价', '社交身份', '产品周边'],
+            friction: '高 (10-18%)',
+            payback: '18-24个月',
+            path: '高客单价 × 多维变量 → 天然落在｜0.5-0.68｜区间',
+            frictionDesc: '选址/装修/人力摩擦极高，但品牌溢价覆盖',
+            similarity: '证明了"高维控制变量"能让归1成为系统默认状态'
+        },
+        mixue: {
+            label: '蜜雪冰城',
+            color: '#fbbf24',
+            ratiosA: [0.92, 0.86, 0.82, 0.79, 0.77, 0.76, 0.75, 0.74, 0.73, 0.73, 0.72, 0.72],
+            ratiosB: [0.95, 0.88, 0.80, 0.74, 0.68, 0.65, 0.66, 0.68, 0.72, 0.76, 0.78, 0.79],
+            currentA: 0.72,
+            currentB: 0.79,
+            statusA: '⚠️ 接近上限，靠IP护城河缓冲',
+            statusB: '⚠️ 突破上界，IP护城河被稀释',
+            statusClassA: 'badge-warn',
+            statusClassB: 'badge-danger',
+            tags: ['极致低价', 'IP雪王', '下沉渠道'],
+            friction: '中 (8-15%)',
+            payback: '12-18个月',
+            path: '瑞幸走量 + 星巴克周边基因 → 杂交演变体',
+            frictionDesc: '门店极小，管理摩擦低，但下沉市场博弈激烈',
+            similarity: '验证了"IP可作为空间成本的替代变量"'
+        },
+        aliyun: {
+            label: '阿里云',
+            color: '#f28b82',
+            ratiosA: [0.78, 0.82, 0.88, 0.92, 0.91, 0.88, 0.85, 0.82, 0.80, 0.79, 0.78, 0.78],
+            ratiosB: [0.80, 0.85, 0.92, 0.96, 0.94, 0.90, 0.86, 0.83, 0.82, 0.81, 0.80, 0.80],
+            currentA: 0.78,
+            currentB: 0.80,
+            statusA: '⚠️ 跃迁期（放大→归1）',
+            statusB: '⚠️ 重资产杠杆放大波动',
+            statusClassA: 'badge-warn',
+            statusClassB: 'badge-danger',
+            tags: ['全栈AI', '芯片自研', '重资产杠杆'],
+            friction: '极高 (20-30%)',
+            payback: '36个月+',
+            path: '先加杠杆（3800亿投入），再等AI收入补回利润',
+            frictionDesc: '资本开支巨大，利润承压，赌时间窗口',
+            similarity: 'B2B重资产归1路径的典型观测样本'
+        },
+        tencentcloud: {
+            label: '腾讯云',
+            color: '#a78bfa',
+            ratiosA: [0.80, 0.76, 0.72, 0.68, 0.65, 0.63, 0.62, 0.61, 0.60, 0.59, 0.59, 0.58],
+            ratiosB: [0.82, 0.78, 0.74, 0.70, 0.68, 0.66, 0.65, 0.64, 0.63, 0.62, 0.62, 0.63],
+            currentA: 0.58,
+            currentB: 0.63,
+            statusA: '✅ 已完成归1（规模化盈利）',
+            statusB: '✅ 仍在安全区内，但安全边际收窄',
+            statusClassA: 'badge-safe',
+            statusClassB: 'badge-warn',
+            tags: ['瘦身战略', 'AI需求', '全球化'],
+            friction: '中 (10-18%)',
+            payback: '12-18个月',
+            path: '先砍低质量项目→提升毛利→归1→再扩规模',
+            frictionDesc: '已消化低质量项目，摩擦降低',
+            similarity: '验证了"先归1、后放大"的稳健路径'
+        },
+        aws: {
+            label: 'AWS',
+            color: '#6c8cff',
+            ratiosA: [0.68, 0.67, 0.66, 0.65, 0.64, 0.64, 0.63, 0.63, 0.62, 0.62, 0.61, 0.61],
+            ratiosB: [0.70, 0.69, 0.68, 0.67, 0.66, 0.66, 0.65, 0.65, 0.65, 0.64, 0.64, 0.64],
+            currentA: 0.61,
+            currentB: 0.64,
+            statusA: '✅✅ 稳态标杆',
+            statusB: '✅ 仍处稳态，但边际压力上升',
+            statusClassA: 'badge-safe',
+            statusClassB: 'badge-warn',
+            tags: ['全球规模', '生态锁定', '定价权'],
+            friction: '低 (5-10%)',
+            payback: '12个月以内',
+            path: '规模 × 生态 → 长期稳定在｜0.5-0.68｜区间内',
+            frictionDesc: '规模摊薄一切，摩擦极低',
+            similarity: '归1模型的"黄金基准"'
+        }
+    };
+
+    // ============================================================
+    //  二、Chart.js 初始化（深色主题）
+    // ============================================================
+    const ctx = document.getElementById('oscillationChart').getContext('2d');
+    let currentCase = 'ruixing';
+    let abMode = 'A';
+
+    // 深色主题的默认颜色
+    const textColor = '#94a3b8';
+    const gridColor = 'rgba(255,255,255,0.04)';
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M11', 'M12'],
+            datasets: [
+                {
+                    label: '方案A · 控价',
+                    data: caseData.ruixing.ratiosA,
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96,165,250,0.08)',
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#0a0f2c',
+                    pointBorderColor: '#60a5fa',
+                    pointBorderWidth: 2,
+                    fill: true,
+                    hidden: false
+                },
+                {
+                    label: '方案B · 降价冲量',
+                    data: caseData.ruixing.ratiosB,
+                    borderColor: '#f87171',
+                    backgroundColor: 'rgba(248,113,113,0.08)',
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#0a0f2c',
+                    pointBorderColor: '#f87171',
+                    pointBorderWidth: 2,
+                    fill: true,
+                    hidden: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(6,10,31,0.9)',
+                    titleColor: '#e8edff',
+                    bodyColor: '#94a3b8',
+                    borderColor: 'rgba(129,140,248,0.2)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0.3,
+                    max: 1.4,
+                    ticks: { color: '#4a5580', stepSize: 0.1 },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: '#4a5580' },
+                    grid: { display: false }
+                }
+            }
+        },
+        plugins: [{
+            id: 'safeZone',
+            beforeDraw: function(chart) {
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+                const yScale = chart.scales.y;
+                const y0 = yScale.getPixelForValue(0.5);
+                const y1 = yScale.getPixelForValue(0.68);
+                ctx.save();
+                ctx.fillStyle = 'rgba(96,165,250,0.06)';
+                ctx.fillRect(chartArea.left, y1, chartArea.right - chartArea.left, y0 - y1);
+                ctx.restore();
+
+                ctx.save();
+                ctx.strokeStyle = 'rgba(96,165,250,0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, y0);
+                ctx.lineTo(chartArea.right, y0);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, y1);
+                ctx.lineTo(chartArea.right, y1);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.fillStyle = '#4a5580';
+                ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('｜0.5', chartArea.right - 36, y0 - 5);
+                ctx.fillText('｜0.68', chartArea.right - 36, y1 - 5);
+                ctx.restore();
+            }
+        }]
+    });
+
+    // ============================================================
+    //  三、核心更新函数
+    // ============================================================
+    function updateDashboard(caseKey, mode) {
+        const data = caseData[caseKey];
+        if (!data) return;
+        const modeA = (mode === 'A' || mode === 'compare');
+        const modeB = (mode === 'B' || mode === 'compare');
+
+        chart.data.datasets[0].data = data.ratiosA;
+        chart.data.datasets[0].hidden = !modeA;
+        chart.data.datasets[0].label = '方案A · 控价';
+        chart.data.datasets[0].borderColor = '#60a5fa';
+        chart.data.datasets[0].pointBorderColor = '#60a5fa';
+
+        chart.data.datasets[1].data = data.ratiosB;
+        chart.data.datasets[1].hidden = !modeB;
+        chart.data.datasets[1].label = '方案B · 降价冲量';
+        chart.data.datasets[1].borderColor = '#f87171';
+        chart.data.datasets[1].pointBorderColor = '#f87171';
+
+        chart.update();
+
+        const currentValA = data.currentA;
+        const currentValB = data.currentB;
+        const statusEl = document.getElementById('statusBadge');
+
+        if (mode === 'compare') {
+            document.getElementById('currentRatio').innerHTML =
+                currentValA.toFixed(2) + ' / ' + currentValB.toFixed(2) + ' <span class="small">A/B 对比</span>';
+            const worst = Math.max(currentValA, currentValB);
+            if (worst < 0.5) {
+                statusEl.textContent = '🔽 低于区间（利润极高，但可能不可持续）';
+                statusEl.className = 'badge-warn';
+            } else if (worst <= 0.68) {
+                statusEl.textContent = '✅ 双方案均处于｜0.5-0.68｜安全区内';
+                statusEl.className = 'badge-safe';
+            } else if (worst <= 0.85) {
+                statusEl.textContent = '⚠️ 至少一个方案逼近归1，但裕度不足';
+                statusEl.className = 'badge-warn';
+            } else {
+                statusEl.textContent = '❌ 至少一个方案处于发散态，需重构';
+                statusEl.className = 'badge-danger';
+            }
+            let decision = '';
+            if (currentValA < 0.68 && currentValB >= 0.68) {
+                decision = '方案A（控价）归1风险更低，推荐采用';
+            } else if (currentValB < 0.68 && currentValA >= 0.68) {
+                decision = '方案B（降价）在当前约束下更优，但需监控摩擦';
+            } else if (currentValA < 0.68 && currentValB < 0.68) {
+                decision = '双方案均安全，建议选择收敛速度更快的方案';
+            } else {
+                decision = '⚠️ 双方案均面临归1压力，建议重新设计控制变量';
+            }
+            document.getElementById('abDecision').innerHTML = '<strong>推荐：</strong>' + decision;
+        } else if (mode === 'A') {
+            document.getElementById('currentRatio').innerHTML =
+                currentValA.toFixed(2) + ' <span class="small">方案A</span>';
+            statusEl.textContent = data.statusA;
+            statusEl.className = data.statusClassA;
+            document.getElementById('abDecision').innerHTML = '<strong>方案A：</strong>控价策略，归1路径稳健';
+        } else {
+            document.getElementById('currentRatio').innerHTML =
+                currentValB.toFixed(2) + ' <span class="small">方案B</span>';
+            statusEl.textContent = data.statusB;
+            statusEl.className = data.statusClassB;
+            document.getElementById('abDecision').innerHTML = '<strong>方案B：</strong>降价冲量，波动风险升高';
+        }
+
+        const tagContainer = document.getElementById('controlTags');
+        tagContainer.innerHTML = data.tags.map(t => `<span class="tag">${t}</span>`).join('');
+        document.getElementById('frictionValue').textContent = data.friction;
+        document.getElementById('frictionValue').className = data.friction.includes('极高') ? 'val danger' :
+                                                            data.friction.includes('高') ? 'val warn' : 'val good';
+        document.getElementById('paybackValue').textContent = data.payback;
+        document.getElementById('pathDesc').textContent = data.path;
+        document.getElementById('frictionDesc').textContent = data.frictionDesc;
+        document.getElementById('similarityDesc').innerHTML = data.similarity;
+    }
+
+    // ============================================================
+    //  四、滑块联动
+    // ============================================================
+    function applySliderEffects() {
+        const priceVal = parseInt(document.getElementById('priceSlider').value);
+        const costVal = parseInt(document.getElementById('costSlider').value);
+        document.getElementById('priceLabel').textContent = priceVal + '%';
+        document.getElementById('costLabel').textContent = costVal + '%';
+
+        const data = caseData[currentCase];
+        if (!data) return;
+
+        const priceFactor = 1 - (priceVal - 100) * 0.0015;
+        const costFactor = 1 + (costVal - 100) * 0.0015;
+
+        const newA = data.ratiosA.map(r => Math.min(1.5, Math.max(0.3, r * priceFactor * costFactor)));
+        const newB = data.ratiosB.map(r => Math.min(1.5, Math.max(0.3, r * priceFactor * costFactor)));
+
+        chart.data.datasets[0].data = newA;
+        chart.data.datasets[1].data = newB;
+        chart.update();
+
+        const lastA = newA[newA.length - 1];
+        const lastB = newB[newB.length - 1];
+        if (abMode === 'compare') {
+            document.getElementById('currentRatio').innerHTML =
+                lastA.toFixed(2) + ' / ' + lastB.toFixed(2) + ' <span class="small">A/B 对比</span>';
+        } else if (abMode === 'A') {
+            document.getElementById('currentRatio').innerHTML =
+                lastA.toFixed(2) + ' <span class="small">方案A</span>';
+        } else {
+            document.getElementById('currentRatio').innerHTML =
+                lastB.toFixed(2) + ' <span class="small">方案B</span>';
+        }
+    }
+
+    // ============================================================
+    //  五、事件绑定
+    // ============================================================
+    document.querySelectorAll('.btn-case').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const caseKey = this.dataset.case;
+            currentCase = caseKey;
+            document.querySelectorAll('.btn-case').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('priceSlider').value = 100;
+            document.getElementById('costSlider').value = 100;
+            document.getElementById('priceLabel').textContent = '100%';
+            document.getElementById('costLabel').textContent = '100%';
+            updateDashboard(currentCase, abMode);
+            applySliderEffects();
+        });
+    });
+
+    document.getElementById('abBtnA').addEventListener('click', function() {
+        abMode = 'A';
+        document.querySelectorAll('.btn-ab').forEach(b => b.classList.remove('active-ab'));
+        this.classList.add('active-ab');
+        updateDashboard(currentCase, 'A');
+        applySliderEffects();
+    });
+    document.getElementById('abBtnB').addEventListener('click', function() {
+        abMode = 'B';
+        document.querySelectorAll('.btn-ab').forEach(b => b.classList.remove('active-ab'));
+        this.classList.add('active-ab');
+        updateDashboard(currentCase, 'B');
+        applySliderEffects();
+    });
+    document.getElementById('abBtnCompare').addEventListener('click', function() {
+        abMode = 'compare';
+        document.querySelectorAll('.btn-ab').forEach(b => b.classList.remove('active-ab'));
+        this.classList.add('active-ab');
+        updateDashboard(currentCase, 'compare');
+        applySliderEffects();
+    });
+
+    document.getElementById('priceSlider').addEventListener('input', applySliderEffects);
+    document.getElementById('costSlider').addEventListener('input', applySliderEffects);
+
+    // ============================================================
+    //  六、初始化
+    // ============================================================
+    abMode = 'A';
+    document.getElementById('abBtnA').classList.add('active-ab');
+    updateDashboard('ruixing', 'A');
+    applySliderEffects();
+</script>
+</body>
+</html>
