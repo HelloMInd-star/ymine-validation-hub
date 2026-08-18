@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🧠 MemoryBase · 公共底层记忆基座 · Y.Mine</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔺</text></svg>" />
+    <style>
+        :root {
+            --bg-deep: #060a1f;
+            --bg-mid: #0a0f2c;
+            --bg-panel: rgba(14,20,42,0.85);
+            --border: rgba(129,140,248,0.18);
+            --accent-cyan: #22d3ee;
+            --accent-purple: #a78bfa;
+            --accent-blue: #60a5fa;
+            --accent-green: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --accent-pink: #f472b6;
+            --text-primary: #e8edff;
+            --text-sec: #94a3b8;
+            --text-dim: #4a5580;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0; padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(2px 2px at 10% 20%, rgba(34,211,238,0.4), transparent),
+                radial-gradient(1px 1px at 30% 60%, rgba(167,139,250,0.35), transparent),
+                radial-gradient(2px 2px at 50% 10%, rgba(255,255,255,0.5), transparent),
+                radial-gradient(1px 1px at 70% 40%, rgba(96,165,250,0.3), transparent),
+                radial-gradient(2px 2px at 90% 80%, rgba(251,191,36,0.3), transparent),
+                radial-gradient(1px 1px at 20% 90%, rgba(255,255,255,0.35), transparent),
+                radial-gradient(1px 1px at 60% 70%, rgba(16,185,129,0.25), transparent),
+                radial-gradient(2px 2px at 80% 20%, rgba(244,114,182,0.25), transparent);
+            background-size: 500px 500px;
+            pointer-events: none; z-index: 0;
+            animation: starTwinkle 8s ease-in-out infinite alternate;
+        }
+        @keyframes starTwinkle { 0%{opacity:.7} 100%{opacity:1} }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes mbScan { to { transform: translateX(100%); } }
+        @keyframes layerGlow {
+            0%,100% { box-shadow: 0 0 20px transparent; }
+            50% { box-shadow: 0 0 30px var(--glow-color, rgba(34,211,238,0.3)); }
+        }
+        @keyframes countUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes lockPulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(251,191,36,0.3); }
+            50% { box-shadow: 0 0 20px rgba(251,191,36,0.6); }
+        }
+
+        .mb-container { max-width:1500px; margin:0 auto; padding:24px; position:relative; z-index:1; }
+        .top-nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+        .breadcrumb { font-size:12px; color:var(--text-dim); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .breadcrumb a { color:var(--accent-cyan); text-decoration:none; }
+        .breadcrumb a:hover { color:#67e8f9; }
+        .breadcrumb .sep { color:var(--text-dim); }
+        .back-home { padding:8px 16px; background:rgba(34,211,238,0.12); border:1px solid rgba(34,211,238,0.3); border-radius:8px; color:var(--accent-cyan); text-decoration:none; font-size:12px; font-weight:600; transition:all 0.2s; }
+        .back-home:hover { background:rgba(34,211,238,0.2); border-color:rgba(34,211,238,0.5); transform:translateX(-2px); box-shadow:0 4px 16px rgba(34,211,238,0.15); }
+
+        .header-banner {
+            background:linear-gradient(135deg, rgba(34,211,238,0.12), rgba(167,139,250,0.10), rgba(96,165,250,0.08));
+            border:1.5px solid rgba(34,211,238,0.3);
+            border-radius:18px; padding:28px 32px; margin-bottom:24px;
+            position:relative; overflow:hidden; backdrop-filter:blur(12px);
+        }
+        .header-banner::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--accent-cyan),var(--accent-purple),var(--accent-blue),transparent); }
+        .header-banner::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.04) 50%,transparent 100%); transform:translateX(-100%); animation:mbScan 6s linear infinite; pointer-events:none; }
+        .header-top { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; }
+        .header-title h1 { font-size:30px; font-weight:800; margin:0 0 10px; background:linear-gradient(135deg,#e0f7fa,var(--accent-cyan),var(--accent-purple),var(--accent-blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:-0.5px; }
+        .header-sub { font-size:13px; color:var(--text-sec); line-height:1.7; max-width:700px; }
+        .header-tags { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+        .htag { font-size:10px; padding:4px 10px; border-radius:6px; border:1px solid; background:rgba(0,0,0,0.25); font-weight:600; }
+        .htag.core { color:var(--accent-cyan); border-color:rgba(34,211,238,0.4); }
+        .htag.filter { color:var(--accent-purple); border-color:rgba(167,139,250,0.4); }
+        .htag.storage { color:var(--accent-green); border-color:rgba(16,185,129,0.4); }
+        .htag.retrieval { color:var(--accent-amber); border-color:rgba(251,191,36,0.4); }
+        .version-pill { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(34,211,238,0.1); border:1px solid rgba(34,211,238,0.25); border-radius:20px; color:var(--accent-cyan); font-size:11px; font-weight:700; letter-spacing:0.5px; }
+        .version-pill .dot { width:6px; height:6px; background:var(--accent-cyan); border-radius:50%; animation:pulse 2s infinite; }
+
+        .lego-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; margin-bottom:20px; }
+        .lego-block {
+            background:var(--bg-panel);
+            border:1.5px solid var(--border);
+            border-radius:14px; padding:22px;
+            backdrop-filter:blur(8px); position:relative; transition:all 0.25s; overflow:hidden;
+        }
+        .lego-block::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+        .lego-block:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,0,0.35); }
+        .lego-block.w-12 { grid-column:span 12; }
+        .lego-block.w-8 { grid-column:span 8; }
+        .lego-block.w-6 { grid-column:span 6; }
+        .lego-block.w-4 { grid-column:span 4; }
+        .lego-block.w-3 { grid-column:span 3; }
+        @media (max-width:1100px) { .lego-block.w-8,.lego-block.w-6,.lego-block.w-4,.lego-block.w-3 { grid-column:span 12; } }
+        .block-title { font-size:14px; font-weight:700; margin:0 0 16px; display:flex; align-items:center; gap:10px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+        .block-title .bicon { font-size:20px; }
+
+        .lego-block.input-block::before { background:linear-gradient(90deg,var(--accent-cyan),var(--accent-blue)); }
+        .lego-block.input-block .block-title { color:var(--accent-cyan); }
+        .lego-block.stats-block::before { background:linear-gradient(90deg,var(--accent-amber),var(--accent-red)); }
+        .lego-block.stats-block .block-title { color:var(--accent-amber); }
+        .lego-block.funnel-block::before { background:linear-gradient(90deg,var(--accent-purple),var(--accent-pink),var(--accent-cyan),var(--accent-green)); }
+        .lego-block.funnel-block .block-title { color:var(--accent-purple); }
+        .lego-block.log-block::before { background:linear-gradient(90deg,var(--accent-blue),var(--accent-purple)); }
+        .lego-block.log-block .block-title { color:var(--accent-blue); }
+        .lego-block.result-block::before { background:linear-gradient(90deg,var(--accent-green),var(--accent-amber)); }
+        .lego-block.result-block .block-title { color:var(--accent-green); }
+
+        .input-tabs { display:flex; gap:8px; margin-bottom:16px; }
+        .input-tab { padding:8px 18px; border-radius:10px; cursor:pointer; font-size:12px; font-weight:600; border:1px solid var(--border); background:var(--bg-panel); color:var(--text-sec); transition:all 0.2s; }
+        .input-tab:hover { border-color:rgba(255,255,255,0.15); color:#fff; }
+        .input-tab.active { background:rgba(34,211,238,0.12); border-color:rgba(34,211,238,0.35); color:var(--accent-cyan); }
+        .input-area { display:none; }
+        .input-area.active { display:block; }
+        .single-input-row { display:flex; gap:10px; margin-bottom:12px; }
+        .single-input-row input { flex:1; padding:12px 16px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:10px; color:var(--text-primary); font-size:13px; outline:none; font-family:inherit; transition:border-color 0.2s; }
+        .single-input-row input:focus { border-color:rgba(34,211,238,0.4); }
+        .single-input-row input::placeholder { color:var(--text-dim); }
+        .btn-primary { padding:12px 24px; background:linear-gradient(135deg,rgba(34,211,238,0.2),rgba(96,165,250,0.15)); border:1px solid rgba(34,211,238,0.4); border-radius:10px; color:var(--accent-cyan); font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+        .btn-primary:hover { background:linear-gradient(135deg,rgba(34,211,238,0.3),rgba(96,165,250,0.25)); border-color:rgba(34,211,238,0.6); box-shadow:0 4px 20px rgba(34,211,238,0.2); }
+        .btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none !important; }
+        .btn-demo {
+            padding:12px 20px; background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(251,146,60,0.14));
+            border:1px solid rgba(251,191,36,0.4); border-radius:10px; color:var(--accent-amber);
+            font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+            margin-left:8px;
+        }
+        .btn-demo:hover { background:linear-gradient(135deg,rgba(251,191,36,0.28),rgba(251,146,60,0.22)); border-color:rgba(251,191,36,0.6); box-shadow:0 4px 20px rgba(251,191,36,0.2); }
+        textarea.multi-input { width:100%; min-height:180px; padding:14px 16px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:10px; color:var(--text-primary); font-size:13px; outline:none; font-family:inherit; resize:vertical; line-height:1.7; transition:border-color 0.2s; }
+        textarea.multi-input:focus { border-color:rgba(34,211,238,0.4); }
+        textarea.multi-input::placeholder { color:var(--text-dim); line-height:1.7; }
+        .import-row { display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+        .btn-secondary { padding:10px 18px; background:rgba(167,139,250,0.1); border:1px solid rgba(167,139,250,0.3); border-radius:8px; color:var(--accent-purple); font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .btn-secondary:hover { background:rgba(167,139,250,0.2); border-color:rgba(167,139,250,0.5); }
+        .hint-text { font-size:11px; color:var(--text-dim); }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+        .stat-card { background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+        .stat-value { font-size:28px; font-weight:900; font-family:'SF Mono',ui-monospace,monospace; margin-bottom:6px; }
+        .stat-label { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+        .stat-card.discard .stat-value { color:var(--text-dim); }
+        .stat-card.buffer .stat-value { color:var(--accent-amber); }
+        .stat-card.longterm .stat-value { color:var(--accent-green); }
+        .stat-bar { height:4px; background:rgba(255,255,255,0.05); border-radius:2px; margin-top:10px; overflow:hidden; }
+        .stat-bar-fill { height:100%; border-radius:2px; transition:width 0.5s ease; }
+        .stat-card.discard .stat-bar-fill { background:linear-gradient(90deg,var(--text-dim),var(--text-dim)); width:0%; }
+        .stat-card.buffer .stat-bar-fill { background:linear-gradient(90deg,var(--accent-amber),var(--accent-red)); width:0%; }
+        .stat-card.longterm .stat-bar-fill { background:linear-gradient(90deg,var(--accent-green),var(--accent-cyan)); width:0%; }
+
+        .funnel-stage { position:relative; }
+        #funnelCanvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:2; }
+        .funnel-container { display:flex; flex-direction:column; align-items:center; gap:0; padding:10px 0; position:relative; z-index:1; }
+        .funnel-layer {
+            position:relative; display:flex; align-items:center; justify-content:space-between;
+            padding:18px 22px; margin:4px 0; border-radius:10px; transition:all 0.4s; cursor:default;
+            min-height:70px;
+        }
+        .funnel-layer::before { content:''; position:absolute; inset:0; border-radius:10px; opacity:0.10; transition:opacity 0.3s; }
+        .layer-left { display:flex; align-items:center; }
+        .funnel-layer .layer-num { font-family:'SF Mono',monospace; font-size:14px; font-weight:800; margin-right:14px; opacity:0.7; min-width:28px; }
+        .funnel-layer .layer-icon { font-size:24px; margin-right:14px; }
+        .funnel-layer .layer-info { text-align:left; flex:1; }
+        .funnel-layer .layer-name { font-size:14px; font-weight:700; margin-bottom:3px; transition:all 0.3s; }
+        .funnel-layer .layer-desc { font-size:10px; opacity:0.55; transition:all 0.3s; }
+        .layer-status {
+            font-size:10px; font-weight:700; padding:4px 10px; border-radius:6px;
+            background:rgba(0,0,0,0.3); border:1px solid var(--border);
+            min-width:72px; text-align:center; transition:all 0.3s;
+        }
+        .layer-count { font-family:'SF Mono',monospace; font-size:18px; font-weight:900; margin-left:12px; min-width:44px; text-align:right; opacity:0.3; transition:all 0.3s; }
+        .funnel-layer.active { animation:layerGlow 1.2s ease-in-out infinite; }
+        .funnel-layer.done::before { opacity:0.20; }
+        .funnel-layer.done .layer-count { opacity:1; }
+
+        .funnel-layer.l1 { width:100%; background:rgba(248,113,113,0.06); border:1.5px solid rgba(248,113,113,0.25); --glow-color:rgba(248,113,113,0.35); }
+        .funnel-layer.l1::before { background:var(--accent-red); }
+        .funnel-layer.l1 .layer-name { color:var(--accent-red); }
+        .funnel-layer.l1 .layer-num { color:var(--accent-red); }
+        .funnel-layer.l1.active { border-color:rgba(248,113,113,0.6); }
+        .funnel-layer.l1.done .layer-status { background:rgba(248,113,113,0.15); border-color:rgba(248,113,113,0.4); color:var(--accent-red); }
+
+        .funnel-layer.l2 { width:88%; background:rgba(251,146,60,0.06); border:1.5px solid rgba(251,146,60,0.25); --glow-color:rgba(251,146,60,0.35); }
+        .funnel-layer.l2::before { background:var(--accent-red); }
+        .funnel-layer.l2 .layer-name { color:var(--accent-red); }
+        .funnel-layer.l2 .layer-num { color:var(--accent-red); }
+        .funnel-layer.l2.active { border-color:rgba(251,146,60,0.6); }
+        .funnel-layer.l2.done .layer-status { background:rgba(251,146,60,0.15); border-color:rgba(251,146,60,0.4); color:var(--accent-red); }
+
+        .funnel-layer.l3 { width:72%; background:rgba(167,139,250,0.06); border:1.5px solid rgba(167,139,250,0.25); --glow-color:rgba(167,139,250,0.35); }
+        .funnel-layer.l3::before { background:var(--accent-purple); }
+        .funnel-layer.l3 .layer-name { color:var(--accent-purple); }
+        .funnel-layer.l3 .layer-num { color:var(--accent-purple); }
+        .funnel-layer.l3.active { border-color:rgba(167,139,250,0.6); }
+        .funnel-layer.l3.done .layer-status { background:rgba(167,139,250,0.15); border-color:rgba(167,139,250,0.4); color:var(--accent-purple); }
+
+        .funnel-layer.l4 { width:55%; background:rgba(16,185,129,0.06); border:1.5px solid rgba(16,185,129,0.25); --glow-color:rgba(16,185,129,0.35); }
+        .funnel-layer.l4::before { background:var(--accent-green); }
+        .funnel-layer.l4 .layer-name { color:var(--accent-green); }
+        .funnel-layer.l4 .layer-num { color:var(--accent-green); }
+        .funnel-layer.l4.active { border-color:rgba(16,185,129,0.6); }
+        .funnel-layer.l4.done .layer-status { background:rgba(16,185,129,0.15); border-color:rgba(16,185,129,0.4); color:var(--accent-green); }
+
+        .funnel-arrow { font-size:18px; color:var(--text-dim); margin:2px 0; z-index:1; position:relative; }
+        .funnel-output {
+            margin-top:12px; padding:14px 28px; background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(34,211,238,0.08));
+            border:1.5px solid rgba(16,185,129,0.3); border-radius:10px; text-align:center;
+            font-size:12px; font-weight:600; color:var(--accent-green); z-index:1; position:relative; transition:all 0.3s;
+        }
+        .funnel-output.done { background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(34,211,238,0.15)); border-color:rgba(16,185,129,0.6); box-shadow:0 0 25px rgba(16,185,129,0.2); }
+        .funnel-output .out-icon { font-size:18px; margin-right:8px; }
+
+        .tag-pill { display:inline-block; font-size:9px; padding:2px 7px; border-radius:4px; font-weight:700; margin-left:6px; }
+        .tag-rap { background:rgba(244,114,182,0.15); color:var(--accent-pink); border:1px solid rgba(244,114,182,0.3); }
+        .tag-blue { background:rgba(96,165,250,0.15); color:var(--accent-blue); border:1px solid rgba(96,165,250,0.3); }
+        .tag-trash { background:rgba(107,114,128,0.15); color:var(--text-dim); border:1px solid rgba(107,114,128,0.3); }
+
+        .result-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+        .result-box {
+            background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:14px; min-height:80px;
+            transition:all 0.3s;
+        }
+        .result-box.active { border-color:rgba(255,255,255,0.15); }
+        .result-box.trash { border-color:var(--text-dim); }
+        .result-box.trash.active { border-color:var(--text-dim); box-shadow:0 0 20px rgba(107,114,128,0.1); }
+        .result-box.buffer { border-color:rgba(251,191,36,0.2); }
+        .result-box.buffer.active { border-color:rgba(251,191,36,0.4); box-shadow:0 0 20px rgba(251,191,36,0.1); }
+        .result-box.longterm { border-color:rgba(16,185,129,0.2); }
+        .result-box.longterm.active { border-color:rgba(16,185,129,0.4); box-shadow:0 0 20px rgba(16,185,129,0.1); }
+        .result-title { font-size:11px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+        .result-count { font-family:'SF Mono',monospace; font-size:16px; font-weight:900; }
+        .result-box.trash .result-title { color:var(--text-dim); }
+        .result-box.buffer .result-title { color:var(--accent-amber); }
+        .result-box.longterm .result-title { color:var(--accent-green); }
+        .result-list { max-height:140px; overflow-y:auto; font-size:10px; line-height:1.7; color:var(--text-sec); }
+        .result-list::-webkit-scrollbar { width:3px; }
+        .result-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+        .result-item { padding:3px 6px; margin-bottom:2px; border-radius:4px; background:rgba(255,255,255,0.02); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; animation:countUp 0.3s ease; }
+
+        .log-container { max-height:260px; overflow-y:auto; font-family:'SF Mono',ui-monospace,monospace; font-size:11px; line-height:1.9; padding:4px; }
+        .log-container::-webkit-scrollbar { width:4px; }
+        .log-container::-webkit-scrollbar-thumb { background:rgba(34,211,238,0.2); border-radius:2px; }
+        .log-entry { padding:2px 0; animation:countUp 0.25s ease; }
+        .log-time { color:var(--text-dim); margin-right:8px; }
+        .log-l1 { color:var(--accent-red); }
+        .log-l2 { color:var(--accent-red); }
+        .log-l3 { color:var(--accent-purple); }
+        .log-l4 { color:var(--accent-green); }
+        .log-ok { color:var(--accent-green); }
+        .log-warn { color:var(--accent-amber); }
+        .log-err { color:var(--text-dim); }
+        .log-info { color:var(--accent-cyan); }
+        .log-arrow { color:var(--text-dim); margin:0 6px; }
+
+        .module-nav { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:8px; }
+        .module-card { background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:10px; padding:14px 12px; text-align:center; text-decoration:none; transition:all 0.2s; cursor:pointer; }
+        .module-card:hover { transform:translateY(-2px); }
+        .module-card .m-icon { font-size:24px; margin-bottom:6px; display:block; }
+        .module-card .m-name { font-size:10px; font-weight:600; color:var(--text-sec); }
+        .module-card.m-filter { border-color:rgba(248,113,113,0.2); }
+        .module-card.m-filter:hover { border-color:rgba(248,113,113,0.4); box-shadow:0 6px 20px rgba(248,113,113,0.1); }
+        .module-card.m-filter .m-name { color:var(--accent-red); }
+        .module-card.m-storage { border-color:rgba(251,146,60,0.2); }
+        .module-card.m-storage:hover { border-color:rgba(251,146,60,0.4); box-shadow:0 6px 20px rgba(251,146,60,0.1); }
+        .module-card.m-storage .m-name { color:var(--accent-red); }
+        .module-card.m-music { border-color:rgba(244,114,182,0.2); }
+        .module-card.m-music:hover { border-color:rgba(244,114,182,0.4); box-shadow:0 6px 20px rgba(244,114,182,0.1); }
+        .module-card.m-music .m-name { color:var(--accent-pink); }
+        .module-card.m-kmp { border-color:rgba(251,191,36,0.2); }
+        .module-card.m-kmp:hover { border-color:rgba(251,191,36,0.4); box-shadow:0 6px 20px rgba(251,191,36,0.1); }
+        .module-card.m-kmp .m-name { color:var(--accent-amber); }
+        .module-card.m-manual { border-color:rgba(96,165,250,0.2); }
+        .module-card.m-manual:hover { border-color:rgba(96,165,250,0.4); box-shadow:0 6px 20px rgba(96,165,250,0.1); }
+        .module-card.m-manual .m-name { color:var(--accent-blue); }
+        .module-status { display:inline-block; font-size:8px; margin-top:4px; padding:1px 5px; border-radius:3px; font-weight:700; }
+        .ms-dev { background:rgba(248,113,113,0.12); color:var(--accent-red); }
+        .ms-done { background:rgba(16,185,129,0.12); color:var(--accent-green); }
+
+        .notice-bar { background:rgba(34,211,238,0.04); border:1px solid rgba(34,211,238,0.15); border-radius:10px; padding:14px 18px; font-size:11px; color:var(--text-sec); line-height:1.8; }
+        .notice-bar strong { color:var(--accent-cyan); }
+
+        .storage-dashboard { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+        .storage-tier {
+            border-radius:12px; padding:20px 18px; position:relative; overflow:hidden;
+            transition:all 0.4s; border:1.5px solid;
+        }
+        .storage-tier::before { content:''; position:absolute; inset:0; opacity:0.06; border-radius:12px; pointer-events:none; }
+        .storage-tier::after { content:''; position:absolute; top:0;left:0;right:0;height:3px; }
+        .tier-hot {
+            background:linear-gradient(145deg,rgba(59,130,246,0.12),rgba(34,211,238,0.08));
+            border-color:rgba(59,130,246,0.35);
+        }
+        .tier-hot::before { background:var(--accent-blue); }
+        .tier-hot::after { background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan),var(--accent-blue)); }
+        .tier-hot.active-hot { box-shadow:0 0 30px rgba(59,130,246,0.2),inset 0 0 20px rgba(34,211,238,0.05); border-color:rgba(59,130,246,0.55); }
+        .tier-warm {
+            background:linear-gradient(145deg,rgba(96,165,250,0.07),rgba(147,197,253,0.05));
+            border-color:rgba(96,165,250,0.22);
+        }
+        .tier-warm::before { background:var(--accent-blue); }
+        .tier-warm::after { background:linear-gradient(90deg,var(--accent-blue),var(--accent-blue)); }
+        .tier-cold {
+            background:linear-gradient(145deg,rgba(75,85,99,0.08),rgba(55,65,81,0.06));
+            border-color:rgba(107,114,128,0.2);
+        }
+        .tier-cold::before { background:var(--text-dim); }
+        .tier-cold::after { background:linear-gradient(90deg,var(--text-dim),var(--text-dim)); }
+        .tier-cold.dormant { opacity:0.45; filter:grayscale(0.6); }
+
+        .tier-header { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+        .tier-icon { font-size:28px; }
+        .tier-name { font-size:13px; font-weight:700; flex:1; }
+        .tier-hot .tier-name { color:var(--accent-blue); }
+        .tier-warm .tier-name { color:var(--accent-blue); }
+        .tier-cold .tier-name { color:var(--text-dim); }
+        .tier-badge { font-size:9px; font-weight:700; padding:3px 8px; border-radius:5px; letter-spacing:0.5px; }
+        .badge-hot { background:rgba(34,211,238,0.15); color:var(--accent-cyan); border:1px solid rgba(34,211,238,0.3); }
+        .badge-warm { background:rgba(251,191,36,0.1); color:var(--accent-amber); border:1px solid rgba(251,191,36,0.25); }
+        .badge-cold { background:rgba(107,114,128,0.12); color:var(--text-dim); border:1px solid rgba(107,114,128,0.25); }
+
+        .tier-metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+        .tier-metric { background:rgba(0,0,0,0.2); border-radius:8px; padding:10px 12px; }
+        .metric-value { font-family:'SF Mono',ui-monospace,monospace; font-size:20px; font-weight:900; }
+        .metric-label { font-size:9px; color:var(--text-dim); margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
+        .tier-hot .metric-value { color:var(--accent-blue); }
+        .tier-warm .metric-value { color:var(--accent-amber); }
+        .tier-cold .metric-value { color:var(--text-dim); }
+
+        .compute-bar { height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; margin-top:8px; }
+        .compute-fill { height:100%; border-radius:3px; transition:width 1s ease; }
+        .tier-hot .compute-fill { background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan)); }
+        .tier-warm .compute-fill { background:linear-gradient(90deg,var(--accent-blue),var(--accent-amber)); }
+        .tier-cold .compute-fill { background:linear-gradient(90deg,var(--text-dim),var(--text-dim)); }
+
+        .tier-desc { font-size:10px; color:var(--text-sec); line-height:1.6; margin-top:10px; }
+        .scan-hot {
+            position:absolute; top:0; left:-100%; width:60%; height:100%;
+            background:linear-gradient(90deg,transparent,rgba(34,211,238,0.08),transparent);
+            animation:hotScan 3s linear infinite; pointer-events:none;
+        }
+        @keyframes hotScan { to { left:150%; } }
+
+        .countdown-box { display:flex; align-items:center; gap:6px; margin-top:8px; font-size:10px; color:var(--text-dim); font-family:'SF Mono',monospace; }
+        .countdown-val { color:var(--accent-amber); font-weight:700; font-size:13px; }
+        .tier-cold .countdown-val { color:var(--text-dim); }
+
+        .music-tabs { display:flex; gap:6px; margin-bottom:14px; }
+        .music-tab {
+            flex:1; padding:10px 8px; border-radius:8px; cursor:pointer; text-align:center;
+            font-size:11px; font-weight:700; border:1.5px solid var(--border);
+            background:rgba(0,0,0,0.2); transition:all 0.3s; position:relative; overflow:hidden;
+        }
+        .music-tab .tab-icon { font-size:18px; display:block; margin-bottom:3px; }
+        .music-tab .tab-name { display:block; }
+        .music-tab.rap { color:var(--accent-pink); border-color:rgba(244,114,182,0.2); }
+        .music-tab.rap:hover { border-color:rgba(244,114,182,0.4); }
+        .music-tab.rap.active { background:rgba(244,114,182,0.15); border-color:rgba(244,114,182,0.5); box-shadow:0 0 18px rgba(244,114,182,0.18); }
+        .music-tab.lyric { color:var(--accent-blue); border-color:rgba(96,165,250,0.2); }
+        .music-tab.lyric:hover { border-color:rgba(96,165,250,0.4); }
+        .music-tab.lyric.active { background:rgba(96,165,250,0.15); border-color:rgba(96,165,250,0.5); box-shadow:0 0 18px rgba(96,165,250,0.18); }
+        .music-tab.noise { color:var(--text-dim); border-color:rgba(107,114,128,0.2); }
+        .music-tab.noise:hover { border-color:rgba(107,114,128,0.4); }
+        .music-tab.noise.active { background:rgba(107,114,128,0.15); border-color:rgba(107,114,128,0.5); }
+        .music-tab .tab-count { font-size:9px; opacity:0.6; font-family:'SF Mono',monospace; }
+        .music-tab.active .tab-count { opacity:1; }
+        .music-tab .compute-ind {
+            position:absolute; bottom:0;left:0;right:0;height:2px;
+            transform:scaleX(0); transition:transform 0.4s; transform-origin:left;
+        }
+        .music-tab.rap .compute-ind { background:var(--accent-pink); }
+        .music-tab.lyric .compute-ind { background:var(--accent-blue); }
+        .music-tab.noise .compute-ind { background:var(--text-dim); }
+        .music-tab.active .compute-ind { transform:scaleX(1); }
+
+        .music-content { position:relative; min-height:240px; }
+        .music-panel {
+            position:absolute; inset:0; border-radius:10px; padding:16px;
+            background:rgba(0,0,0,0.2); border:1px solid var(--border);
+            transition:all 0.4s; overflow:hidden;
+        }
+        .music-panel.dormant {
+            opacity:0.2; filter:grayscale(1) brightness(0.5);
+            transform:scale(0.97); pointer-events:none;
+            border-color:rgba(255,255,255,0.04);
+        }
+        .music-panel.rap-panel { border-color:rgba(244,114,182,0.2); }
+        .music-panel.rap-panel.active { box-shadow:0 0 25px rgba(244,114,182,0.1); border-color:rgba(244,114,182,0.4); }
+        .music-panel.lyric-panel { border-color:rgba(96,165,250,0.2); }
+        .music-panel.lyric-panel.active { box-shadow:0 0 25px rgba(96,165,250,0.1); border-color:rgba(96,165,250,0.4); }
+        .music-panel.noise-panel { border-color:rgba(107,114,128,0.2); }
+        .music-panel.noise-panel.active { border-color:rgba(107,114,128,0.35); }
+
+        .panel-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+        .pstat { background:rgba(0,0,0,0.25); border-radius:6px; padding:8px 6px; text-align:center; }
+        .pstat-val { font-family:'SF Mono',monospace; font-size:16px; font-weight:900; }
+        .pstat-lbl { font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-top:1px; }
+        .rap-panel .pstat-val { color:var(--accent-pink); }
+        .lyric-panel .pstat-val { color:var(--accent-blue); }
+        .noise-panel .pstat-val { color:var(--text-dim); }
+
+        .isolation-bar { height:4px; background:rgba(255,255,255,0.05); border-radius:2px; margin:10px 0; overflow:hidden; }
+        .isolation-fill { height:100%; border-radius:2px; transition:width 0.8s; }
+        .rap-panel .isolation-fill { background:linear-gradient(90deg,var(--accent-pink),var(--accent-pink)); width:0%; }
+        .lyric-panel .isolation-fill { background:linear-gradient(90deg,var(--accent-blue),var(--accent-blue)); width:0%; }
+        .noise-panel .isolation-fill { background:linear-gradient(90deg,var(--text-dim),var(--text-dim)); width:0%; }
+        .music-panel.active .isolation-fill { width:100%; }
+
+        .panel-items { max-height:100px; overflow-y:auto; font-size:10px; line-height:1.8; }
+        .panel-items::-webkit-scrollbar { width:3px; }
+        .panel-items::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+        .pitem { padding:3px 8px; margin-bottom:2px; border-radius:4px; background:rgba(255,255,255,0.02); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .rap-panel .pitem { color:rgba(244,114,182,0.7); border-left:2px solid rgba(244,114,182,0.4); }
+        .lyric-panel .pitem { color:rgba(96,165,250,0.7); border-left:2px solid rgba(96,165,250,0.4); }
+        .noise-panel .pitem { color:var(--text-dim); border-left:2px solid rgba(107,114,128,0.3); }
+
+        .panel-status { font-size:10px; font-weight:600; display:flex; align-items:center; gap:6px; margin-top:8px; }
+        .status-dot { width:6px; height:6px; border-radius:50%; animation:pulse 1.5s infinite; }
+        .rap-panel.active .status-dot { background:var(--accent-pink); box-shadow:0 0 8px var(--accent-pink); }
+        .lyric-panel.active .status-dot { background:var(--accent-blue); box-shadow:0 0 8px var(--accent-blue); }
+        .noise-panel .status-dot { background:var(--text-dim); animation:none; }
+        .rap-panel:not(.active) .status-dot, .lyric-panel:not(.active) .status-dot { background:var(--text-dim); animation:none; }
+        .panel-status.sleeping { color:var(--text-dim); }
+        .panel-status.running { color:var(--text-sec); }
+
+        .pulse-bar {
+            position:absolute; top:0;left:0;right:0;height:2px;
+            background:linear-gradient(90deg,transparent,currentColor,transparent);
+            opacity:0;
+        }
+        .music-panel.active .pulse-bar { opacity:0.5; animation:hotScan 2.5s linear infinite; }
+        .rap-panel .pulse-bar { color:var(--accent-pink); }
+        .lyric-panel .pulse-bar { color:var(--accent-blue); }
+        .noise-panel .pulse-bar { color:var(--text-dim); }
+
+        .lego-block.storage-block::before { background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan),var(--accent-green)); }
+        .lego-block.storage-block .block-title { color:var(--accent-blue); }
+        .lego-block.music-block::before { background:linear-gradient(90deg,var(--accent-pink),var(--accent-purple),var(--text-dim)); }
+        .lego-block.music-block .block-title { color:var(--accent-pink); }
+
+        .lego-block.kmp-block::before { background:linear-gradient(90deg,var(--accent-amber),var(--accent-red)); }
+        .lego-block.kmp-block .block-title { color:var(--accent-amber); }
+        .lego-block.manual-aes-block::before { background:linear-gradient(90deg,var(--accent-pink),var(--accent-pink)); }
+        .lego-block.manual-aes-block .block-title { color:var(--accent-pink); }
+        .lego-block.manual-strat-block::before { background:linear-gradient(90deg,var(--accent-red),var(--accent-red)); }
+        .lego-block.manual-strat-block .block-title { color:var(--accent-red); }
+
+        .kmp-search-row { display:flex; gap:10px; margin-bottom:16px; }
+        .kmp-input {
+            flex:1; padding:12px 16px; background:rgba(0,0,0,0.3); border:1.5px solid rgba(251,191,36,0.25);
+            border-radius:10px; color:var(--text-primary); font-size:13px; outline:none; font-family:inherit;
+            transition:all 0.2s;
+        }
+        .kmp-input:focus { border-color:rgba(251,191,36,0.5); box-shadow:0 0 15px rgba(251,191,36,0.1); }
+        .kmp-input::placeholder { color:var(--text-dim); }
+        .btn-kmp {
+            padding:12px 24px; background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(245,158,11,0.15));
+            border:1px solid rgba(251,191,36,0.4); border-radius:10px; color:var(--accent-amber);
+            font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+        }
+        .btn-kmp:hover { background:linear-gradient(135deg,rgba(251,191,36,0.3),rgba(245,158,11,0.25)); border-color:rgba(251,191,36,0.6); box-shadow:0 4px 20px rgba(251,191,36,0.2); }
+        .kmp-hint { font-size:10px; color:var(--text-dim); margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; }
+        .kmp-quick {
+            padding:4px 10px; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.2);
+            border-radius:6px; color:var(--accent-amber); font-size:10px; cursor:pointer; transition:all 0.2s;
+        }
+        .kmp-quick:hover { background:rgba(251,191,36,0.15); border-color:rgba(251,191,36,0.4); }
+
+        .kmp-skeleton {
+            position:relative; background:rgba(0,0,0,0.2); border-radius:10px; padding:16px;
+            border:1px solid rgba(251,191,36,0.1); min-height:120px;
+        }
+        .skeleton-label { font-size:10px; color:rgba(251,191,36,0.6); font-weight:700; margin-bottom:12px; letter-spacing:1px; }
+        .skeleton-chain { display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
+        .puzzle-piece {
+            padding:8px 12px; border-radius:6px; font-size:10px; font-weight:600;
+            border:1.5px solid; position:relative; transition:all 0.4s; cursor:default;
+            opacity:0; transform:translateY(8px);
+        }
+        .puzzle-piece.matched { opacity:1; transform:translateY(0); box-shadow:0 0 12px var(--puz-glow, rgba(251,191,36,0.3)); }
+        .puzzle-piece.found { background:rgba(251,191,36,0.15); border-color:rgba(251,191,36,0.5); color:var(--accent-amber); --puz-glow:rgba(251,191,36,0.4); }
+        .puzzle-piece.node { background:rgba(34,211,238,0.08); border-color:rgba(34,211,238,0.3); color:var(--accent-cyan); --puz-glow:rgba(34,211,238,0.3); }
+        .puzzle-piece.edge { background:rgba(167,139,250,0.08); border-color:rgba(167,139,250,0.3); color:var(--accent-purple); --puz-glow:rgba(167,139,250,0.3); }
+        .puzzle-arrow { color:var(--text-dim); font-size:14px; }
+        .kmp-results { margin-top:12px; }
+        .kmp-result-item {
+            background:rgba(0,0,0,0.25); border-left:3px solid rgba(251,191,36,0.4);
+            border-radius:6px; padding:10px 14px; margin-bottom:8px; font-size:11px; line-height:1.7;
+            opacity:0; transform:translateX(-10px); transition:all 0.3s;
+        }
+        .kmp-result-item.show { opacity:1; transform:translateX(0); }
+        .kmp-result-item .src { font-size:9px; color:rgba(251,191,36,0.6); font-weight:700; margin-bottom:3px; }
+        .kmp-result-item .txt { color:var(--text-sec); }
+        /* ★★★ 优化 3：KMP 匹配词高亮 ★★★ */
+        .kmp-result-item .hl {
+            color: #22d3ee !important;
+            background: rgba(34,211,238,0.15);
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            border-bottom: 2px solid #22d3ee;
+            box-shadow: 0 0 12px rgba(34,211,238,0.2);
+            font-size: 1.1em;
+        }
+        .kmp-noresult { text-align:center; padding:30px; color:var(--text-dim); font-size:11px; }
+        .kmp-stats { display:flex; gap:16px; font-size:10px; color:var(--text-dim); margin-top:8px; }
+        .kmp-stats b { color:var(--accent-amber); font-family:'SF Mono',monospace; }
+
+        .manual-panel { background:rgba(0,0,0,0.2); border-radius:10px; padding:16px; border:1px solid var(--border); }
+        .manual-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+        .manual-icon { font-size:24px; }
+        .manual-title { font-size:13px; font-weight:700; flex:1; }
+        .manual-subtitle { font-size:9px; color:var(--text-dim); margin-top:2px; }
+        .manual-alert {
+            font-size:9px; padding:4px 10px; border-radius:6px; font-weight:700;
+            background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:var(--accent-red);
+            animation:pulse 2s infinite;
+        }
+        .manual-aes-block .manual-alert { background:rgba(236,72,153,0.1); border-color:rgba(236,72,153,0.3); color:var(--accent-pink); }
+
+        .candidate-list { margin-bottom:12px; max-height:160px; overflow-y:auto; }
+        .candidate-list::-webkit-scrollbar { width:3px; }
+        .candidate-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+        .candidate-item {
+            display:flex; align-items:flex-start; gap:10px; padding:10px 12px;
+            background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px;
+            margin-bottom:6px; transition:all 0.2s;
+        }
+        .candidate-item:hover { border-color:rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); }
+        .cand-check {
+            width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border);
+            cursor:pointer; flex-shrink:0; margin-top:1px; transition:all 0.2s;
+            display:flex; align-items:center; justify-content:center; font-size:10px;
+        }
+        .cand-check.checked { background:rgba(16,185,129,0.3); border-color:var(--accent-green); color:var(--accent-green); }
+        .cand-text { flex:1; font-size:11px; line-height:1.6; color:var(--text-sec); }
+        .cand-score { font-family:'SF Mono',monospace; font-size:10px; font-weight:700; flex-shrink:0; }
+        .score-high { color:var(--accent-green); }
+        .score-mid { color:var(--accent-amber); }
+        .score-low { color:var(--accent-red); }
+        .cand-tag { font-size:8px; padding:1px 5px; border-radius:3px; margin-left:6px; font-weight:700; }
+
+        .decision-actions { display:flex; gap:8px; margin-top:10px; }
+        .btn-decision {
+            flex:1; padding:10px; border-radius:8px; font-size:11px; font-weight:700;
+            cursor:pointer; transition:all 0.2s; text-align:center; border:1px solid;
+        }
+        .btn-approve { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:var(--accent-green); }
+        .btn-approve:hover { background:rgba(16,185,129,0.2); border-color:rgba(16,185,129,0.5); box-shadow:0 4px 15px rgba(16,185,129,0.15); }
+        .btn-reject { background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:var(--accent-red); }
+        .btn-reject:hover { background:rgba(248,113,113,0.2); border-color:rgba(248,113,113,0.5); box-shadow:0 4px 15px rgba(248,113,113,0.15); }
+        .btn-defer { background:rgba(251,191,36,0.1); border-color:rgba(251,191,36,0.3); color:var(--accent-amber); }
+        .btn-defer:hover { background:rgba(251,191,36,0.2); border-color:rgba(251,191,36,0.5); box-shadow:0 4px 15px rgba(251,191,36,0.15); }
+
+        .strategy-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+        .strategy-card {
+            background:rgba(0,0,0,0.25); border:1.5px solid var(--border); border-radius:8px;
+            padding:12px 10px; text-align:center; cursor:pointer; transition:all 0.2s;
+        }
+        .strategy-card:hover { transform:translateY(-2px); }
+        .strategy-card.selected { border-color:var(--sel-color,rgba(239,68,68,0.5)); box-shadow:0 0 15px var(--sel-glow,rgba(239,68,68,0.15)); }
+        .strategy-card.conservative { --sel-color:rgba(96,165,250,0.6); --sel-glow:rgba(96,165,250,0.2); }
+        .strategy-card.balanced { --sel-color:rgba(251,191,36,0.6); --sel-glow:rgba(251,191,36,0.2); }
+        .strategy-card.aggressive { --sel-color:rgba(239,68,68,0.6); --sel-glow:rgba(239,68,68,0.2); }
+        .strat-icon { font-size:22px; display:block; margin-bottom:4px; }
+        .strat-name { font-size:10px; font-weight:700; }
+        .strategy-card.conservative .strat-name { color:var(--accent-blue); }
+        .strategy-card.balanced .strat-name { color:var(--accent-amber); }
+        .strategy-card.aggressive .strat-name { color:var(--accent-red); }
+        .strat-desc { font-size:8px; color:var(--text-dim); margin-top:2px; }
+
+        /* ★★★ 优化 5：锁定视觉反馈 ★★★ */
+        .strategy-grid.locked .strategy-card {
+            cursor: not-allowed;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .strategy-grid.locked .strategy-card.selected {
+            opacity: 0.8;
+            border-color: #fbbf24;
+        }
+        .allocation-bar.locked {
+            border: 2px solid #fbbf24;
+            box-shadow: 0 0 20px rgba(251,191,36,0.3);
+            border-radius: 8px;
+        }
+        .lock-badge {
+            display: inline-block;
+            background: #fbbf24;
+            color: #000;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 10px;
+            border-radius: 4px;
+            margin-left: 10px;
+            animation: lockPulse 2s ease-in-out infinite;
+        }
+
+        .allocation-bar { height:24px; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden; display:flex; margin:10px 0; }
+        .alloc-seg { height:100%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; transition:width 0.5s ease; min-width:0; overflow:hidden; }
+        .alloc-rap { background:linear-gradient(90deg,var(--accent-pink),var(--accent-pink)); color:#fff; }
+        .alloc-lyric { background:linear-gradient(90deg,var(--accent-blue),var(--accent-blue)); color:#fff; }
+        .alloc-cash { background:linear-gradient(90deg,var(--text-dim),var(--text-dim)); color:#fff; }
+        .alloc-label-row { display:flex; gap:12px; font-size:9px; color:var(--text-dim); margin-bottom:8px; }
+        .alloc-label-dot { width:8px; height:8px; border-radius:2px; display:inline-block; margin-right:4px; vertical-align:middle; }
+
+        .manual-log { max-height:80px; overflow-y:auto; font-family:'SF Mono',monospace; font-size:9px; line-height:1.8; color:var(--text-dim); background:rgba(0,0,0,0.2); border-radius:6px; padding:8px 10px; }
+        .manual-log::-webkit-scrollbar { width:3px; }
+        .manual-log::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+        .manual-log .ok { color:var(--accent-green); }
+        .manual-log .no { color:var(--accent-red); }
+        .manual-log .wait { color:var(--accent-amber); }
+
+        .final-banner {
+            grid-column:1/-1; background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(34,211,238,0.08),rgba(167,139,250,0.06));
+            border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:18px 24px;
+            text-align:center; margin-top:4px;
+        }
+        .final-banner h3 { margin:0 0 6px; font-size:15px; background:linear-gradient(135deg,var(--accent-green),var(--accent-cyan),var(--accent-purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-weight:800; }
+        .final-banner p { margin:0; font-size:11px; color:var(--text-sec); line-height:1.7; }
+    </style>
+</head>
+<body>
+<div class="mb-container">
+
+    <div class="top-nav">
+        <div class="breadcrumb">
+            <a href="../index.html">🏠 总控台</a><span class="sep">›</span>
+            <span style="color:var(--accent-cyan)">🧠 MemoryBase 记忆基座</span>
+        </div>
+        <a href="../index.html" class="back-home">← 返回总控台</a>
+    </div>
+
+    <div class="header-banner">
+        <div class="header-top">
+            <div class="header-title">
+                <h1>🧠 MemoryBase · 公共底层记忆基座</h1>
+                <div class="header-sub">
+                    Game-OS V2.1 全域公共记忆底座 · V1.0正式交付 · 四级净化漏斗·三层仓储·曲风隔离·KMP骨架检索·双人工决策闸门·存量数据全盘活
+                </div>
+                <div class="header-tags">
+                    <span class="htag core">🔒 核心基座</span>
+                    <span class="htag filter">🔻 四级过滤·动态</span>
+                    <span class="htag storage">💾 三层存储</span>
+                    <span class="htag retrieval">🔍 KMP检索</span>
+                </div>
+            </div>
+            <div class="version-pill">
+                <span class="dot"></span>
+                V1.0 正式交付 · 全模块就绪
+            </div>
+        </div>
+    </div>
+
+    <div class="lego-grid">
+
+        <div class="lego-block w-8 input-block">
+            <div class="block-title">
+                <span class="bicon">📥</span> 原始记忆输入
+            </div>
+            <div class="input-tabs">
+                <div class="input-tab active" onclick="switchInput('single')">✏️ 单行输入</div>
+                <div class="input-tab" onclick="switchInput('multi')">📋 批量导入</div>
+            </div>
+            <div id="inputSingle" class="input-area active">
+                <div class="single-input-row">
+                    <input type="text" id="singleText" placeholder="输入一条记忆文本、方案片段、知识点..." oninput="updateStats()" />
+                    <button class="btn-primary" id="btnSubmitSingle" onclick="submitSingle()">🔽 送入净化</button>
+                </div>
+                <div class="hint-text">💡 支持方案描述、决策逻辑、知识点、对话摘要等任意文本，点击「🎬 一键演示」加载测试数据</div>
+            </div>
+            <div id="inputMulti" class="input-area">
+                <textarea class="multi-input" id="multiText" placeholder="批量粘贴多行记忆文本，每行一条..." oninput="updateStats()"></textarea>
+                <div class="import-row">
+                    <button class="btn-primary" id="btnSubmitMulti" onclick="submitMulti()">🔽 批量送入净化</button>
+                    <button class="btn-demo" onclick="runDemo()">🎬 一键演示</button>
+                    <button class="btn-secondary" onclick="loadDemoText()">📋 加载测试数据</button>
+                    <span class="hint-text">演示包含：语气词/Rap歌词/蓝筹知识/四维数据/公理数据/无效内容</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="lego-block w-4 stats-block">
+            <div class="block-title">
+                <span class="bicon">📊</span> 流转结果统计
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card discard">
+                    <div class="stat-value" id="statDiscard">0</div>
+                    <div class="stat-label">废弃垃圾</div>
+                </div>
+                <div class="stat-card buffer">
+                    <div class="stat-value" id="statBuffer">0</div>
+                    <div class="stat-label">缓冲库</div>
+                </div>
+                <div class="stat-card longterm">
+                    <div class="stat-value" id="statLongterm">0</div>
+                    <div class="stat-label">长期库</div>
+                </div>
+            </div>
+            <div class="notice-bar" style="margin-top:14px">
+                <strong>📊 三库分流：</strong><br/>
+                · 灰色粒子 → 废弃垃圾库（直接消散）<br/>
+                · 金色粒子 → 缓冲待审库（待人工复核）<br/>
+                · 绿色粒子 → 长期公理库（永久存储）
+            </div>
+        </div>
+
+        <div class="lego-block w-8 funnel-block">
+            <div class="block-title">
+                <span class="bicon">🔻</span> 四级净化漏斗 · 粒子动态流转
+                <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,0.3);font-weight:400" id="funnelState">等待输入...</span>
+            </div>
+            <div class="funnel-stage">
+                <canvas id="funnelCanvas"></canvas>
+                <div class="funnel-container">
+                    <div class="funnel-layer l1" id="layer1">
+                        <div class="layer-left">
+                            <span class="layer-num">L1</span>
+                            <span class="layer-icon">🧹</span>
+                            <div class="layer-info">
+                                <div class="layer-name">粗滤降噪层 <span class="tag-pill tag-trash">剔除语气词</span></div>
+                                <div class="layer-desc">自动剔除口头禅、语气助词、无意义感叹零碎语句</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center">
+                            <div class="layer-status" id="status1">待处理</div>
+                            <div class="layer-count" id="count1">0</div>
+                        </div>
+                    </div>
+                    <div class="funnel-arrow">▼</div>
+                    <div class="funnel-layer l2" id="layer2">
+                        <div class="layer-left">
+                            <span class="layer-num">L2</span>
+                            <span class="layer-icon">🏷️</span>
+                            <div class="layer-info">
+                                <div class="layer-name">业务标签分拣层 <span class="tag-pill tag-rap">Rap成长</span> <span class="tag-pill tag-blue">抒情蓝筹</span> <span class="tag-pill tag-trash">噪音废弃</span></div>
+                                <div class="layer-desc">自动三类标签分类：Rap成长库 / 抒情蓝筹库 / 噪音废弃库</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center">
+                            <div class="layer-status" id="status2">待处理</div>
+                            <div class="layer-count" id="count2">0</div>
+                        </div>
+                    </div>
+                    <div class="funnel-arrow">▼</div>
+                    <div class="funnel-layer l3" id="layer3">
+                        <div class="layer-left">
+                            <span class="layer-num">L3</span>
+                            <span class="layer-icon">🧮</span>
+                            <div class="layer-info">
+                                <div class="layer-name">四维结构化校验层</div>
+                                <div class="layer-desc">仅可拆解为【主体 · 运动 · 幅值 · 外部扰动】四维的数据放行</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center">
+                            <div class="layer-status" id="status3">待处理</div>
+                            <div class="layer-count" id="count3">0</div>
+                        </div>
+                    </div>
+                    <div class="funnel-arrow">▼</div>
+                    <div class="funnel-layer l4" id="layer4">
+                        <div class="layer-left">
+                            <span class="layer-num">L4</span>
+                            <span class="layer-icon">🔒</span>
+                            <div class="layer-info">
+                                <div class="layer-name">球面公理终审层</div>
+                                <div class="layer-desc">符合系统数理公理的数据→长期库，其余→缓冲库待审</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center">
+                            <div class="layer-status" id="status4">待处理</div>
+                            <div class="layer-count" id="count4">0</div>
+                        </div>
+                    </div>
+                    <div class="funnel-output" id="funnelOut">
+                        <span class="out-icon">⏳</span> 等待净化流程启动
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lego-block w-4 log-block">
+            <div class="block-title">
+                <span class="bicon">📝</span> 过滤处理日志
+                <button class="btn-secondary" style="margin-left:auto;padding:4px 10px;font-size:9px" onclick="clearLog()">清空</button>
+            </div>
+            <div class="log-container" id="logBox">
+                <div class="log-entry"><span class="log-time">[系统]</span><span class="log-info">四级净化漏斗引擎就绪，等待输入...</span></div>
+            </div>
+        </div>
+
+        <div class="lego-block w-8 storage-block">
+            <div class="block-title">
+                <span class="bicon">💾</span> 三级分层仓储仪表盘
+                <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,0.3);font-weight:400">热算力·温存活·冷休眠</span>
+            </div>
+            <div class="storage-dashboard">
+                <div class="storage-tier tier-hot active-hot" id="tierHot">
+                    <div class="scan-hot"></div>
+                    <div class="tier-header">
+                        <span class="tier-icon">🔵</span>
+                        <span class="tier-name">长期同源基准库</span>
+                        <span class="tier-badge badge-hot">🔥 热存储</span>
+                    </div>
+                    <div class="tier-metrics">
+                        <div class="tier-metric">
+                            <div class="metric-value" id="hotTotal">0</div>
+                            <div class="metric-label">总条目</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" id="hotCompute">78%</div>
+                            <div class="metric-label">热算力占用</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" id="hotIndex">0</div>
+                            <div class="metric-label">骨架索引</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" style="color:var(--accent-cyan)">实时</div>
+                            <div class="metric-label">检索模式</div>
+                        </div>
+                    </div>
+                    <div class="compute-bar"><div class="compute-fill" id="hotBar" style="width:78%"></div></div>
+                    <div class="tier-desc">⚡ 高频访问区 · 数理公理常驻内存 · KMP实时索引 · 响应时延 &lt;10ms · 全量算力供给</div>
+                </div>
+
+                <div class="storage-tier tier-warm" id="tierWarm">
+                    <div class="tier-header">
+                        <span class="tier-icon">🟡</span>
+                        <span class="tier-name">中间缓冲复审库</span>
+                        <span class="tier-badge badge-warm">🌤️ 温存储</span>
+                    </div>
+                    <div class="tier-metrics">
+                        <div class="tier-metric">
+                            <div class="metric-value" id="warmTotal">0</div>
+                            <div class="metric-label">待复审条目</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" id="warmCompute">22%</div>
+                            <div class="metric-label">算力占用</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" id="warmPatrol">二分</div>
+                            <div class="metric-label">巡检方式</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="countdown-box">⏱ <span class="countdown-val" id="warmCountdown">12:00</span></div>
+                            <div class="metric-label" style="margin-top:6px">下次巡检倒计时</div>
+                        </div>
+                    </div>
+                    <div class="compute-bar"><div class="compute-fill" id="warmBar" style="width:22%"></div></div>
+                    <div class="tier-desc">📋 四维待审区 · 定期二分巡检 · 人工复核闸门 · 公理确认后升入热库 · 不通过则下沉冷库</div>
+                </div>
+
+                <div class="storage-tier tier-cold dormant" id="tierCold">
+                    <div class="tier-header">
+                        <span class="tier-icon">⚫</span>
+                        <span class="tier-name">冷存淘汰库</span>
+                        <span class="tier-badge badge-cold">❄️ 冷休眠</span>
+                    </div>
+                    <div class="tier-metrics">
+                        <div class="tier-metric">
+                            <div class="metric-value" id="coldTotal">0</div>
+                            <div class="metric-label">归档总量</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" style="color:var(--text-dim)">0%</div>
+                            <div class="metric-label">运行算力</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" style="color:var(--text-dim)">休眠</div>
+                            <div class="metric-label">索引状态</div>
+                        </div>
+                        <div class="tier-metric">
+                            <div class="metric-value" style="color:var(--text-dim)">压缩</div>
+                            <div class="metric-label">存储模式</div>
+                        </div>
+                    </div>
+                    <div class="compute-bar"><div class="compute-fill" style="width:2%"></div></div>
+                    <div class="tier-desc">📦 废弃归档区 · 不占用运行算力 · 高压缩比存档 · 仅在回溯审计时解压唤醒</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lego-block w-4 music-block">
+            <div class="block-title">
+                <span class="bicon">🎵</span> 三大曲风子库
+                <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,0.3);font-weight:400">算力隔离切换</span>
+            </div>
+            <div class="music-tabs">
+                <div class="music-tab rap active" onclick="switchMusic('rap')">
+                    <span class="tab-icon">🎤</span>
+                    <span class="tab-name">Rap成长库</span>
+                    <span class="tab-count" id="cntRapTab">0</span>
+                    <div class="compute-ind"></div>
+                </div>
+                <div class="music-tab lyric" onclick="switchMusic('lyric')">
+                    <span class="tab-icon">🎹</span>
+                    <span class="tab-name">抒情蓝筹</span>
+                    <span class="tab-count" id="cntLyricTab">0</span>
+                    <div class="compute-ind"></div>
+                </div>
+                <div class="music-tab noise" onclick="switchMusic('noise')">
+                    <span class="tab-icon">🔇</span>
+                    <span class="tab-name">噪音冷存</span>
+                    <span class="tab-count" id="cntNoiseTab">0</span>
+                    <div class="compute-ind"></div>
+                </div>
+            </div>
+            <div class="music-content">
+                <div class="music-panel rap-panel active" id="panelRap">
+                    <div class="pulse-bar"></div>
+                    <div class="panel-stats">
+                        <div class="pstat"><div class="pstat-val" id="rapTotal">0</div><div class="pstat-lbl">条目数</div></div>
+                        <div class="pstat"><div class="pstat-val" style="color:var(--accent-amber)">45%</div><div class="pstat-lbl">算力配额</div></div>
+                        <div class="pstat"><div class="pstat-val" style="color:var(--accent-green)">活跃</div><div class="pstat-lbl">运行状态</div></div>
+                    </div>
+                    <div class="isolation-bar"><div class="isolation-fill"></div></div>
+                    <div class="panel-items" id="rapList"></div>
+                    <div class="panel-status running">
+                        <span class="status-dot"></span> 算力已激活 · 押韵/flow/battle模式在线
+                    </div>
+                </div>
+                <div class="music-panel lyric-panel dormant" id="panelLyric">
+                    <div class="pulse-bar"></div>
+                    <div class="panel-stats">
+                        <div class="pstat"><div class="pstat-val" id="lyricTotal">0</div><div class="pstat-lbl">条目数</div></div>
+                        <div class="pstat"><div class="pstat-val" style="color:var(--accent-amber)">0%</div><div class="pstat-lbl">算力配额</div></div>
+                        <div class="pstat"><div class="pstat-val" style="color:var(--text-dim)">休眠</div><div class="pstat-lbl">运行状态</div></div>
+                    </div>
+                    <div class="isolation-bar"><div class="isolation-fill"></div></div>
+                    <div class="panel-items" id="lyricList"></div>
+                    <div class="panel-status sleeping">
+                        <span class="status-dot"></span> 算力已隔离 · 切换标签激活蓝调音阶模型
+                    </div>
+                </div>
+                <div class="music-panel noise-panel dormant" id="panelNoise">
+                    <div class="pulse-bar"></div>
+                    <div class="panel-stats">
+                        <div class="pstat"><div class="pstat-val" id="noiseTotal">0</div><div class="pstat-lbl">条目数</div></div>
+                        <div class="pstat"><div class="pstat-val" style="color:var(--text-dim)">0%</div><div class="pstat-lbl">算力配额</div></div>
+                        <div class="pstat"><div class="pstat-val" style="color:var(--text-dim)">冻结</div><div class="pstat-lbl">运行状态</div></div>
+                    </div>
+                    <div class="isolation-bar"><div class="isolation-fill"></div></div>
+                    <div class="panel-items" id="noiseList"></div>
+                    <div class="panel-status sleeping">
+                        <span class="status-dot"></span> 冷存归档 · 不占用NPU推理资源
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lego-block w-12">
+            <div class="block-title" style="color:var(--accent-blue)">
+                <span class="bicon">🧩</span> MemoryBase 五大子模块导航
+            </div>
+            <div class="module-nav">
+                <div class="module-card m-filter">
+                    <span class="m-icon">🔻</span>
+                    <div class="m-name">filter_funnel</div>
+                    <div class="m-name" style="font-size:9px;opacity:0.6;margin-top:2px">过滤漏斗</div>
+                    <span class="module-status ms-done">✓ Batch2完成</span>
+                </div>
+                <div class="module-card m-storage">
+                    <span class="m-icon">💾</span>
+                    <div class="m-name">storage_three</div>
+                    <div class="m-name" style="font-size:9px;opacity:0.6;margin-top:2px">三层存储</div>
+                    <span class="module-status ms-done">✓ Batch3完成</span>
+                </div>
+                <div class="module-card m-music">
+                    <span class="m-icon">🎵</span>
+                    <div class="m-name">music_sub_lib</div>
+                    <div class="m-name" style="font-size:9px;opacity:0.6;margin-top:2px">音乐子库</div>
+                    <span class="module-status ms-done">✓ Batch3完成</span>
+                </div>
+                <div class="module-card m-kmp">
+                    <span class="m-icon">🔍</span>
+                    <div class="m-name">kmp_retrieval</div>
+                    <div class="m-name" style="font-size:9px;opacity:0.6;margin-top:2px">KMP检索</div>
+                    <span class="module-status ms-done">✓ Batch4完成</span>
+                </div>
+                <div class="module-card m-manual">
+                    <span class="m-icon">🎛️</span>
+                    <div class="m-name">manual_control</div>
+                    <div class="m-name" style="font-size:9px;opacity:0.6;margin-top:2px">人工管控</div>
+                    <span class="module-status ms-done">✓ Batch4完成</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="lego-block w-12 kmp-block">
+            <div class="block-title">
+                <span class="bicon">🧩</span> KMP 公共骨架检索引擎
+                <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,0.3);font-weight:400">沿固定骨架调取·非全局遍历·拼图可视化</span>
+            </div>
+            <div class="kmp-search-row">
+                <input type="text" class="kmp-input" id="kmpInput" placeholder="输入架构关键词沿骨架检索... 例：凯利、稳态、WACC、押韵、三角审计" onkeydown="if(event.key==='Enter')runKMP()"/>
+                <button class="btn-kmp" onclick="runKMP()">🔍 骨架检索</button>
+            </div>
+            <div class="kmp-hint">
+                快捷骨架词：
+                <span class="kmp-quick" onclick="quickKMP('凯利')">凯利公式</span>
+                <span class="kmp-quick" onclick="quickKMP('稳态')">0.50稳态</span>
+                <span class="kmp-quick" onclick="quickKMP('WACC')">WACC税盾</span>
+                <span class="kmp-quick" onclick="quickKMP('押韵')">Rap押韵</span>
+                <span class="kmp-quick" onclick="quickKMP('三角审计')">三角审计</span>
+                <span class="kmp-quick" onclick="quickKMP('几何算力')">几何算力</span>
+            </div>
+            <div class="kmp-skeleton" id="kmpSkeleton">
+                <div class="skeleton-label">🧱 公共逻辑骨架 · 拼图节点匹配链路</div>
+                <div class="skeleton-chain" id="skeletonChain"></div>
+                <div class="kmp-stats" id="kmpStats" style="display:none">
+                    <span>骨架匹配路径：<b id="kmpPath">0</b> 节点</span>
+                    <span>调取片段：<b id="kmpHit">0</b> 条</span>
+                    <span>检索模式：<b style="color:var(--accent-cyan)">骨架定向·非全盘遍历</b></span>
+                </div>
+                <div class="kmp-results" id="kmpResults"></div>
+            </div>
+        </div>
+
+        <div class="lego-block w-6 manual-aes-block">
+            <div class="block-title">
+                <span class="bicon">🎨</span> 审美经验判定操作台
+                <span class="manual-alert">🤖 仅候选·人工终审</span>
+            </div>
+            <div class="manual-panel">
+                <div class="manual-header" style="margin:0 0 10px 0;padding:0 0 10px 0">
+                    <span class="manual-icon">👁️</span>
+                    <div style="flex:1">
+                        <div class="manual-title" style="color:var(--accent-pink)">跨领域相似度主观筛选</div>
+                        <div class="manual-subtitle">机器展示候选·人类经验直觉最终裁决</div>
+                    </div>
+                </div>
+                <div class="candidate-list" id="aesCandidates"></div>
+                <div class="decision-actions">
+                    <button class="btn-decision btn-approve" onclick="aesDecision('approve')">✓ 审美通过</button>
+                    <button class="btn-decision btn-defer" onclick="aesDecision('defer')">⏸ 暂缓观察</button>
+                    <button class="btn-decision btn-reject" onclick="aesDecision('reject')">✗ 审美否决</button>
+                </div>
+                <div class="manual-log" id="aesLog" style="margin-top:10px"><span style="color:rgba(255,255,255,0.2)">等待候选生成... 运行一次净化或检索即出现候选</span></div>
+            </div>
+        </div>
+
+        <div class="lego-block w-6 manual-strat-block">
+            <div class="block-title">
+                <span class="bicon">⚔️</span> 顶层全局战略决策操作台
+                <span class="manual-alert">👑 君主决策权·AI无自主权</span>
+            </div>
+            <div class="manual-panel">
+                <div class="manual-header" style="margin:0 0 10px 0;padding:0 0 10px 0">
+                    <span class="manual-icon">🏛️</span>
+                    <div style="flex:1">
+                        <div class="manual-title" style="color:var(--accent-red)">资产整体配置方向人工抉择</div>
+                        <div class="manual-subtitle">资本配置战略·Rap/蓝筹/现金比例人工锁定</div>
+                    </div>
+                </div>
+                <div class="strategy-grid" id="stratGrid">
+                    <div class="strategy-card conservative" onclick="selectStrategy('conservative')">
+                        <span class="strat-icon">🛡️</span>
+                        <div class="strat-name">防御型</div>
+                        <div class="strat-desc">蓝筹为主</div>
+                    </div>
+                    <div class="strategy-card balanced selected" onclick="selectStrategy('balanced')">
+                        <span class="strat-icon">⚖️</span>
+                        <div class="strat-name">均衡型</div>
+                        <div class="strat-desc">双库平衡</div>
+                    </div>
+                    <div class="strategy-card aggressive" onclick="selectStrategy('aggressive')">
+                        <span class="strat-icon">🔥</span>
+                        <div class="strat-name">进取型</div>
+                        <div class="strat-desc">Rap成长</div>
+                    </div>
+                </div>
+                <div class="alloc-label-row">
+                    <span><span class="alloc-label-dot" style="background:var(--accent-pink)"></span>Rap成长库</span>
+                    <span><span class="alloc-label-dot" style="background:var(--accent-blue)"></span>抒情蓝筹库</span>
+                    <span><span class="alloc-label-dot" style="background:var(--text-dim)"></span>现金缓冲</span>
+                </div>
+                <div class="allocation-bar">
+                    <div class="alloc-seg alloc-rap" id="allocRap" style="width:35%">35%</div>
+                    <div class="alloc-seg alloc-lyric" id="allocLyric" style="width:50%">50%</div>
+                    <div class="alloc-seg alloc-cash" id="allocCash" style="width:15%">15%</div>
+                </div>
+                <div class="decision-actions">
+                    <button class="btn-decision btn-approve" onclick="lockStrategy()">🔒 锁定配置（君主令）</button>
+                    <button class="btn-decision btn-defer" onclick="resetStrategy()">↺ 重置方案</button>
+                </div>
+                <div class="manual-log" id="stratLog" style="margin-top:10px"><span style="color:rgba(255,255,255,0.2)">当前：均衡型 · Rap 35% · 蓝筹 50% · 现金 15% · 待君主锁定</span></div>
+            </div>
+        </div>
+
+        <div class="final-banner">
+            <h3>🎉 MemoryBase V1.0 · 公共底层记忆基座 全部交付完成</h3>
+            <p>
+                ✅ 四级净化漏斗动态粒子流转 &nbsp;·&nbsp; ✅ 三级仓储热温冷仪表盘 &nbsp;·&nbsp; ✅ 三大曲风子库算力隔离<br/>
+                ✅ KMP骨架拼图检索 &nbsp;·&nbsp; ✅ 审美经验判定操作台 &nbsp;·&nbsp; ✅ 顶层战略决策操作台 &nbsp;·&nbsp; ✅ Game-OS存量历史数据已挂载盘活
+            </p>
+        </div>
+
+    </div>
+
+    <div class="notice-bar" style="margin-bottom:24px">
+        <strong>🔒 机密参数隔离声明：</strong>
+        本页面演示为前端可视化流程，所有独家核心公式（相似度阈值、球面半径、公理校验规则、四维结构化映射权重等）
+        均存放于各子模块私有内核文件中，前端不暴露原始核心代码。
+    </div>
+
+</div>
+
+<script>
+(function(){
+    const NOISE_WORDS = ['的','了','吗','呢','啊','吧','呀','哦','嗯','哈','嘿','哎','唉','喔','噢','呃','那个','这个','就是','然后','其实','感觉','觉得','可能','应该','大概','也许','或许','差不多','基本上','怎么说呢','你知道吗','我觉得吧','那个那个','就是说','反正','总之','哎呀妈呀'];
+    const AXIOM_KEYWORDS = ['0.50','稳态','中轴线','凯利','WACC','DCF','CAPM','最优','均衡','三角审计','杠杆','球面','11层','公理','f*','MM定理','税盾','几何算力','V模型','S模型','L模型','0.48','0.68'];
+
+    const DEMO_TEXTS = [
+        '哎呀妈呀，就是说那个凯利公式最优仓位f*=(bp-q)/b，嗯你知道吗这个真的超级重要',
+        'Flow like water 押韵八拍 节奏感拉满 麦克风握紧 全场都燥起来',
+        '0.50是资本结构稳态中轴线 WACC含MM税盾模型最优杠杆锁定',
+        '三角审计三模型并行±0.02校验 偏差超阈值即触发熔断',
+        'V模型算力消耗0.48基线 S模型稳态0.50 L模型峰值0.68',
+        '啊吧啊吧 嗯嗯啊啊 哈哈哈哈 这个那个 就是说呢',
+        '抒情旋律缓慢流淌 钢琴音符轻柔诉说 情绪在蓝调中沉淀',
+        '市场有效假说CAPM模型 Beta系数系统性风险度量',
+        '哟 这个beat太炸了 freestyle即兴押韵 battle就是要赢',
+        '随便聊聊啦 也没啥特别的 就感觉还行吧'
+    ];
+
+    let particles = [];
+    let isRunning = false;
+    let canvas, ctx;
+    let layerRects = {};
+    let animId = null;
+
+    const results = { trash: [], buffer: [], longterm: [] };
+
+    function $(id){ return document.getElementById(id); }
+    function log(msg, cls='log-info'){
+        const t = new Date();
+        const ts = `${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}.${String(t.getMilliseconds()).padStart(3,'0')}`;
+        const box = $('logBox');
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.innerHTML = `<span class="log-time">[${ts}]</span><span class="${cls}">${msg}</span>`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+    function clearLog(){ $('logBox').innerHTML = '<div class="log-entry"><span class="log-time">[系统]</span><span class="log-info">日志已清空</span></div>'; }
+
+    function updateLayerState(idx, state, count){
+        const layer = $('layer'+idx);
+        const status = $('status'+idx);
+        const cnt = $('count'+idx);
+        layer.classList.remove('active','done');
+        if(state==='processing'){ layer.classList.add('active'); status.textContent='处理中...'; }
+        else if(state==='done'){ layer.classList.add('done'); status.textContent='✓ 完成'; }
+        else { status.textContent='待处理'; }
+        if(count!==undefined) cnt.textContent = count;
+    }
+    const musicLibs = { rap: [], lyric: [], noise: [] };
+    let activeMusicTab = 'rap';
+    let countdownSec = 720;
+
+    function classifyMusic(text){
+        const RAP_KW = ['flow','Flow','FLOW','押韵','beat','Beat','freestyle','battle','Battle','麦克风','rap','Rap','燥','拍','节奏','韵脚','diss','MC','hiphop','握紧','八拍','即兴'];
+        const LYRIC_KW = ['旋律','钢琴','抒情','情绪','蓝调','诉说','轻柔','缓慢','音符','流淌','沉淀','温柔','伤感','乐章','和弦','吟唱'];
+        for(const k of RAP_KW){ if(text.includes(k)) return 'rap'; }
+        for(const k of LYRIC_KW){ if(text.includes(k)) return 'lyric'; }
+        return 'noise';
+    }
+
+    function updateStorageDashboard(){
+        const legacyCount = LEGACY_DATA.length;
+        const ht = results.longterm.length + legacyCount;
+        const wt = results.buffer.length;
+        const ct = results.trash.length + 3;
+        $('hotTotal').textContent = ht;
+        $('hotIndex').textContent = Math.floor(ht * 1.7);
+        $('warmTotal').textContent = wt;
+        $('coldTotal').textContent = ct;
+        const hotPct = Math.min(35 + ht*5, 92);
+        const warmPct = Math.min(8 + wt*4, 45);
+        $('hotCompute').textContent = hotPct+'%';
+        $('warmCompute').textContent = warmPct+'%';
+        $('hotBar').style.width = hotPct+'%';
+        $('warmBar').style.width = warmPct+'%';
+        if(ht > 0) $('tierHot').classList.add('active-hot');
+        if(ct > 0) $('tierCold').classList.remove('dormant');
+        else $('tierCold').classList.add('dormant');
+
+        musicLibs.rap = []; musicLibs.lyric = []; musicLibs.noise = [];
+        [...results.longterm, ...results.buffer, ...results.trash].forEach(t=>{
+            const cat = classifyMusic(t);
+            musicLibs[cat].push(t);
+        });
+        $('rapTotal').textContent = musicLibs.rap.length;
+        $('lyricTotal').textContent = musicLibs.lyric.length;
+        $('noiseTotal').textContent = musicLibs.noise.length;
+        $('cntRapTab').textContent = musicLibs.rap.length;
+        $('cntLyricTab').textContent = musicLibs.lyric.length;
+        $('cntNoiseTab').textContent = musicLibs.noise.length;
+        $('rapList').innerHTML = musicLibs.rap.slice(0,30).map(t=>`<div class="pitem" title="${t}">🎤 ${t.length>22?t.substring(0,22)+'...':t}</div>`).join('') || '<div style="font-size:10px;color:rgba(244,114,182,0.3);text-align:center;padding:20px">暂无Rap成长条目</div>';
+        $('lyricList').innerHTML = musicLibs.lyric.slice(0,30).map(t=>`<div class="pitem" title="${t}">🎹 ${t.length>22?t.substring(0,22)+'...':t}</div>`).join('') || '<div style="font-size:10px;color:rgba(96,165,250,0.3);text-align:center;padding:20px">暂无抒情蓝筹条目</div>';
+        $('noiseList').innerHTML = musicLibs.noise.slice(0,30).map(t=>`<div class="pitem" title="${t}">🔇 ${t.length>22?t.substring(0,22)+'...':t}</div>`).join('') || '<div style="font-size:10px;color:rgba(156,163,175,0.3);text-align:center;padding:20px">暂无噪音废弃条目</div>';
+
+        $('statDiscard').textContent = ct;
+        $('statBuffer').textContent = wt;
+        $('statLongterm').textContent = ht;
+    }
+
+    window.switchMusic = function(tab){
+        activeMusicTab = tab;
+        ['rap','lyric','noise'].forEach(t=>{
+            const tabEl = document.querySelector('.music-tab.'+t);
+            const panel = $('panel'+t.charAt(0).toUpperCase()+t.slice(1));
+            if(t === tab){
+                tabEl.classList.add('active');
+                panel.classList.remove('dormant');
+                panel.classList.add('active');
+            } else {
+                tabEl.classList.remove('active');
+                panel.classList.add('dormant');
+                panel.classList.remove('active');
+            }
+        });
+        log(`🎵 曲风切换：${tab==='rap'?'Rap成长库':tab==='lyric'?'抒情蓝筹库':'噪音冷存库'} · 算力已隔离切换`,'log-info');
+    }
+
+    function startCountdown(){
+        setInterval(()=>{
+            countdownSec--;
+            if(countdownSec <= 0){ countdownSec = 720; log('⏱ 缓冲库二分巡检启动...','log-warn'); }
+            const m = Math.floor(countdownSec/60);
+            const s = countdownSec%60;
+            $('warmCountdown').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }, 1000);
+    }
+
+    function resetFunnel(){
+        for(let i=1;i<=4;i++){ updateLayerState(i,'idle',0); }
+        $('funnelOut').className='funnel-output'; $('funnelOut').innerHTML='<span class="out-icon">⏳</span> 等待净化流程启动';
+        $('funnelState').textContent='等待输入...';
+        results.trash=[];results.buffer=[];results.longterm=[]; updateStorageDashboard(); particles=[];
+    }
+
+    function initCanvas(){
+        canvas = $('funnelCanvas');
+        ctx = canvas.getContext('2d');
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        requestAnimationFrame(animate);
+    }
+    function resizeCanvas(){
+        const stage = canvas.parentElement;
+        const rect = stage.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        for(let i=1;i<=4;i++){
+            const el = $('layer'+i);
+            const r = el.getBoundingClientRect();
+            layerRects['l'+i] = {
+                x: r.left - rect.left + r.width/2,
+                y: r.top - rect.top + r.height/2,
+                w: r.width, h: r.height
+            };
+        }
+        const out = $('funnelOut').getBoundingClientRect();
+        layerRects.out = { x: out.left-rect.left+out.width/2, y: out.top-rect.top+out.height/2 };
+    }
+
+    const PARTICLE_COLORS = {
+        input: '#22d3ee', noise:'#6b7280', rap:'#f472b6', blue:'#60a5fa',
+        trash:'#6b7280', buffer:'#fbbf24', longterm:'#10b981', valid:'#a78bfa'
+    };
+
+    function spawnParticles(texts, startLayer){
+        const start = layerRects['l'+startLayer];
+        if(!start) return;
+        texts.forEach((t,idx)=>{
+            setTimeout(()=>{
+                const spread = (start.w||300) * 0.35;
+                particles.push({
+                    x: start.x + (Math.random()-0.5)*spread,
+                    y: start.y - 20,
+                    vx: (Math.random()-0.5)*1.2,
+                    vy: 0.5 + Math.random()*0.8,
+                    life: 1,
+                    type: t.type,
+                    text: t.text,
+                    state: 'enter',
+                    target: 'l'+(startLayer+1),
+                    layer: startLayer,
+                    size: 3 + Math.random()*3,
+                    alpha: 0.8 + Math.random()*0.2,
+                    wobble: Math.random()*Math.PI*2,
+                    wobbleSpeed: 0.03+Math.random()*0.04,
+                    fadeOut: false, outTarget:null
+                });
+            }, idx*60 + Math.random()*100);
+        });
+    }
+
+    function animate(){
+        if(!ctx) return;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const now = Date.now();
+        for(let i=particles.length-1;i>=0;i--){
+            const p = particles[i];
+            p.wobble += p.wobbleSpeed;
+            if(p.state==='enter'){
+                const target = layerRects[p.target];
+                if(target){
+                    const dx = target.x - p.x;
+                    const dy = target.y - p.y;
+                    const dist = Math.sqrt(dx*dx+dy*dy);
+                    if(dist < 18){
+                        p.state = 'arrived';
+                        p.arrivedTime = now;
+                        p.vy=0;p.vx=0;
+                    } else {
+                        p.vx += dx/dist*0.15;
+                        p.vy += dy/dist*0.15;
+                        p.vx *= 0.88; p.vy *= 0.88;
+                    }
+                }
+            } else if(p.state==='arrived'){
+                if(now - p.arrivedTime > 350){
+                    routeParticle(p);
+                }
+            } else if(p.state==='todown' || p.state==='totrash' || p.state==='tobuffer' || p.state==='tolongterm'){
+                const tx = p.targetX, ty = p.targetY;
+                const dx = tx - p.x, dy = ty - p.y;
+                const dist = Math.sqrt(dx*dx+dy*dy);
+                if(dist<8){
+                    if(p.state==='tolongterm'||p.state==='tobuffer'||p.state==='totrash'){
+                        p.fadeOut=true;
+                    } else {
+                        p.state='arrived'; p.arrivedTime=now; p.vy=0;p.vx=0;
+                        p.target = 'l'+(p.layer+1);
+                    }
+                } else {
+                    p.vx += dx/dist*0.18;
+                    p.vy += dy/dist*0.18;
+                    p.vx *= 0.85; p.vy *= 0.85;
+                }
+            }
+            if(p.fadeOut){
+                p.life -= 0.025;
+                p.alpha = p.life;
+                p.vy += 0.05;
+                if(p.life<=0){ particles.splice(i,1); continue; }
+            }
+            p.x += p.vx + Math.sin(p.wobble)*0.3;
+            p.y += p.vy;
+            const color = PARTICLE_COLORS[p.type] || '#fff';
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.shadowBlur = 8; ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+        animId = requestAnimationFrame(animate);
+    }
+
+    function routeParticle(p){
+        const stage = canvas.parentElement.getBoundingClientRect();
+        const outEl = $('funnelOut').getBoundingClientRect();
+        const outX = (outEl.left+outEl.right)/2 - stage.left;
+        const outY = (outEl.top+outEl.bottom)/2 - stage.top;
+
+        if(p.layer===1){
+            if(p.type==='noise'){
+                p.state='totrash';
+                p.targetX = p.x + (Math.random()-0.5)*200;
+                p.targetY = canvas.height + 30;
+                setTimeout(()=>{ results.trash.push(p.text); updateStorageDashboard(); },300);
+            } else {
+                const nxt = layerRects.l2;
+                if(nxt){
+                    p.state='todown'; p.layer=2;
+                    p.targetX = nxt.x + (Math.random()-0.5)*nxt.w*0.5;
+                    p.targetY = nxt.y;
+                }
+            }
+        } else if(p.layer===2){
+            if(p.type==='trash'){
+                p.state='totrash';
+                p.targetX = p.x + (Math.random()-0.5)*180;
+                p.targetY = canvas.height + 30;
+                setTimeout(()=>{ results.trash.push(p.text); updateStorageDashboard(); },300);
+            } else {
+                const nxt = layerRects.l3;
+                if(nxt){
+                    p.state='todown'; p.layer=3;
+                    p.targetX = nxt.x+(Math.random()-0.5)*nxt.w*0.4;
+                    p.targetY = nxt.y;
+                    p.type='valid';
+                }
+            }
+        } else if(p.layer===3){
+            if(p.type==='trash'){
+                p.state='tobuffer';
+                p.targetX = outX - 60;
+                p.targetY = outY + 40;
+                setTimeout(()=>{ results.buffer.push(p.text); updateStorageDashboard(); },300);
+            } else {
+                const nxt = layerRects.l4;
+                if(nxt){
+                    p.state='todown'; p.layer=4;
+                    p.targetX = nxt.x+(Math.random()-0.5)*nxt.w*0.3;
+                    p.targetY = nxt.y;
+                }
+            }
+        } else if(p.layer===4){
+            const isAxiom = AXIOM_KEYWORDS.some(k=>p.text.includes(k));
+            p.state = isAxiom?'tolongterm':'tobuffer';
+            p.targetX = isAxiom ? outX + 40 : outX - 40;
+            p.targetY = outY + 50;
+            p.type = isAxiom?'longterm':'buffer';
+            setTimeout(()=>{
+                if(isAxiom){ results.longterm.push(p.text); } else { results.buffer.push(p.text); }
+                updateStorageDashboard();
+            },300);
+        }
+    }
+
+    function processL1_RoughFilter(texts){
+        return new Promise(resolve=>{
+            updateLayerState(1,'processing'); $('funnelState').textContent='L1 粗滤降噪中...';
+            log('▶ L1 粗滤降噪层启动，输入 '+texts.length+' 条原始记忆','log-l1');
+            const cleaned = []; let noiseCount=0;
+            texts.forEach(t=>{
+                let clean = t;
+                NOISE_WORDS.forEach(w=>{ const r=new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'); clean=clean.replace(r,''); });
+                clean = clean.replace(/\s+/g,' ').trim();
+                if(clean.length<3){
+                    noiseCount++;
+                    cleaned.push({text:t,type:'noise'});
+                    log(`  ✗ 剔除语气杂质：「${t.substring(0,20)}${t.length>20?'...':''}」灰色粒子消散`,'log-err');
+                } else {
+                    cleaned.push({text:clean,type:'input'});
+                    log(`  ✓ 降噪完成：「${clean.substring(0,25)}${clean.length>25?'...':''}」`,'log-l1');
+                }
+            });
+            updateLayerState(1,'done',texts.length);
+            log(`L1 完成：剔除 ${noiseCount} 条，通过 ${texts.length-noiseCount} 条`,'log-ok');
+            setTimeout(()=>resolve(cleaned), 400);
+        });
+    }
+
+    function processL2_LabelSort(items){
+        return new Promise(resolve=>{
+            updateLayerState(2,'processing'); $('funnelState').textContent='L2 标签分拣中...';
+            log('▶ L2 业务标签分拣层启动','log-l2');
+            const RAP_KEYS = ['flow','押韵','beat','freestyle','battle','麦克风','rap','Rap','燥','拍','节奏','韵脚','diss','MC','hiphop'];
+            const BLUE_KEYS = ['旋律','钢琴','抒情','情绪','蓝调','诉说','轻柔','缓慢','音符','流淌','沉淀','温柔','伤感'];
+            const labeled = []; let trash=0,rap=0,blue=0;
+            items.forEach(it=>{
+                if(it.type==='noise'){ labeled.push(it); return; }
+                const t = it.text;
+                let label = null;
+                if(RAP_KEYS.some(k=>t.toLowerCase().includes(k.toLowerCase()))){ label='rap'; rap++; log(`  ♪ Rap成长库：「${t.substring(0,22)}...」`,'log-l2'); }
+                else if(BLUE_KEYS.some(k=>t.includes(k))){ label='blue'; blue++; log(`  ♫ 抒情蓝筹库：「${t.substring(0,22)}...」`,'log-l2'); }
+                else if(t.length<8 && !/[\d.+\-*/=()%]/.test(t)){ label='trash'; trash++; log(`  ✗ 噪音废弃：「${t}」灰色粒子消散`,'log-err'); }
+                else { label='valid'; log(`  ◆ 业务有效内容：「${t.substring(0,22)}...」`,'log-l2'); }
+                labeled.push({text:it.text,type:label});
+            });
+            updateLayerState(2,'done',items.length-trash);
+            log(`L2 完成：Rap ${rap}条 · 蓝筹 ${blue}条 · 废弃 ${trash}条 · 业务有效 ${items.length-trash-rap-blue}条`,'log-ok');
+            setTimeout(()=>resolve(labeled),400);
+        });
+    }
+
+    function processL3_FourDimCheck(items){
+        return new Promise(resolve=>{
+            updateLayerState(3,'processing'); $('funnelState').textContent='L3 四维结构化校验中...';
+            log('▶ L3 四维结构化校验层启动：主体·运动·幅值·外部扰动','log-l3');
+            const checked = []; let pass=0,fail=0;
+            items.forEach(it=>{
+                if(it.type==='noise'||it.type==='trash'){ checked.push(it); return; }
+                const t = it.text;
+                const hasSubject = /[\u4e00-\u9fa5A-Za-z]{2,}/.test(t);
+                const hasMotion = /(流|增|减|变|动|行|运|升|降|锁|定|校验|熔|断|触发|度量|消|沉淀|燥|押|握紧|诉说)/.test(t);
+                const hasMagnitude = /[\d.+\-*/=()%±]/.test(t) || /(最优|稳态|基线|峰值|系统|全)/.test(t);
+                const hasDisturbance = /(风险|扰动|偏差|阈值|税盾|压力|熔断|超|beat|battle|情绪)/.test(t);
+                const dimCount = [hasSubject,hasMotion,hasMagnitude,hasDisturbance].filter(Boolean).length;
+                if(dimCount>=3 || (hasMagnitude&&hasSubject)){
+                    pass++; checked.push({text:it.text,type:'valid'});
+                    log(`  ✓ 四维拆解通过(${dimCount}/4)：「${t.substring(0,20)}...」`,'log-l3');
+                } else {
+                    fail++; checked.push({text:it.text,type:'trash'});
+                    log(`  ✗ 四维不完整(${dimCount}/4)→缓冲库：「${t.substring(0,20)}...」`,'log-warn');
+                }
+            });
+            updateLayerState(3,'done',pass);
+            log(`L3 完成：结构化通过 ${pass}条 · 不完整→缓冲 ${fail}条`,'log-ok');
+            setTimeout(()=>resolve(checked),400);
+        });
+    }
+
+    function processL4_AxiomFinal(items){
+        return new Promise(resolve=>{
+            updateLayerState(4,'processing'); $('funnelState').textContent='L4 球面公理终审中...';
+            log('▶ L4 球面公理终审层启动：数理公理一致性校验','log-l4');
+            const results_arr = []; let longterm=0,buffer=0;
+            items.forEach(it=>{
+                if(it.type==='noise'||it.type==='trash'){ results_arr.push(it); return; }
+                const t = it.text;
+                const isAxiom = AXIOM_KEYWORDS.some(k=>t.includes(k));
+                if(isAxiom){
+                    longterm++; results_arr.push({text:t,type:'longterm'});
+                    log(`  ✓ 符合公理→长期库：「${t.substring(0,22)}...」`,'log-l4');
+                } else {
+                    buffer++; results_arr.push({text:t,type:'buffer'});
+                    log(`  ⚠ 公理校验待审→缓冲库：「${t.substring(0,22)}...」`,'log-warn');
+                }
+            });
+            updateLayerState(4,'done',longterm+buffer);
+            log(`L4 完成：长期公理库 ${longterm}条 · 缓冲待审 ${buffer}条`,'log-ok');
+            setTimeout(()=>resolve(results_arr),500);
+        });
+    }
+
+    async function runPipeline(texts){
+        if(isRunning) return;
+        isRunning=true;
+        setButtonsDisabled(true);
+        resetFunnel();
+        $('funnelState').textContent='流程启动...';
+        log(`═══ 净化流程启动，共 ${texts.length} 条原始记忆 ═══`,'log-info');
+        await sleep(200); resizeCanvas();
+        const l1Results = await processL1_RoughFilter(texts);
+        spawnParticles(l1Results.map(r=>({text:r.text,type:r.type})), 1);
+        await sleep(900); resizeCanvas();
+        const l2Results = await processL2_LabelSort(l1Results);
+        const toL2 = l2Results.filter(r=>r.type!=='noise');
+        spawnParticles(toL2, 2);
+        await sleep(900); resizeCanvas();
+        const l3Results = await processL3_FourDimCheck(l2Results);
+        const toL3 = l3Results.filter(r=>r.type!=='noise'&&r.type!=='trash');
+        spawnParticles(toL3, 3);
+        await sleep(900); resizeCanvas();
+        const l4Results = await processL4_AxiomFinal(l3Results);
+        const toL4 = l4Results.filter(r=>r.type!=='noise'&&r.type!=='trash');
+        spawnParticles(toL4, 4);
+        await sleep(1200);
+        $('funnelOut').className='funnel-output done';
+        $('funnelOut').innerHTML=`<span class="out-icon">✅</span> 净化完成 · 热库 ${results.longterm.length}条 · 温库 ${results.buffer.length}条 · 冷库 ${results.trash.length}条`;
+        $('funnelState').textContent=`✓ 全流程完成`;
+        log(`═══ 全流程完成：长期热库${results.longterm.length}条 · 缓冲温库${results.buffer.length}条 · 冷存淘汰${results.trash.length}条 ═══`,'log-ok');
+        updateStorageDashboard();
+        isRunning=false; setButtonsDisabled(false);
+    }
+
+    function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+    function setButtonsDisabled(d){
+        $('btnSubmitSingle').disabled=d; $('btnSubmitMulti').disabled=d;
+    }
+
+    window.switchInput = function(mode){
+        document.querySelectorAll('.input-tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.input-area').forEach(a=>a.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('input'+mode.charAt(0).toUpperCase()+mode.slice(1)).classList.add('active');
+        updateStats();
+    };
+    function getCurrentText(){
+        return $('inputSingle').classList.contains('active') ? $('singleText').value : $('multiText').value;
+    }
+    window.updateStats = function(){
+        const text = getCurrentText();
+        const total = text.length;
+        let noiseCount=0;
+        NOISE_WORDS.forEach(w=>{
+            const r=new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
+            const m=text.match(r); if(m) noiseCount+=m.length*w.length;
+        });
+        noiseCount=Math.min(noiseCount,total*0.8);
+        $('statDiscard').textContent=results.trash.length;
+        $('statBuffer').textContent=results.buffer.length;
+        $('statLongterm').textContent=results.longterm.length;
+    };
+    window.submitSingle = function(){
+        const text = $('singleText').value.trim();
+        if(!text){ alert('请输入记忆文本'); return; }
+        runPipeline([text]);
+    };
+    window.submitMulti = function(){
+        const text = $('multiText').value.trim();
+        if(!text){ alert('请输入批量记忆文本'); return; }
+        const lines = text.split('\n').map(l=>l.trim()).filter(l=>l);
+        runPipeline(lines);
+    };
+    window.loadDemoText = function(){
+        $('multiText').value = DEMO_TEXTS.join('\n');
+        updateStats();
+        log('已加载 10 条模拟测试文本到批量导入区','log-info');
+    };
+    window.runDemo = function(){
+        log('🎬 一键演示启动：加载内置测试数据集','log-info');
+        runPipeline([...DEMO_TEXTS]);
+    };
+    window.clearLog = clearLog;
+
+    // Game-OS 存量历史数据挂载（盘活复用）
+    const LEGACY_DATA = [
+        {src:'📁 AirMind/航空估值历史', text:'DCF现金流折现法加权平均资本成本WACC=8.5% 航空业Beta=1.2'},
+        {src:'📁 FinanceMind/罗斯数理工具', text:'凯利公式最优仓位f*=(bp-q)/b 0.50资本结构稳态中轴线'},
+        {src:'📁 GameMind/几何算力模型', text:'V模型算力消耗0.48基线 S模型稳态0.50 L模型峰值0.68 二进制硬件落地'},
+        {src:'📁 金融稳态实验室/对照仿真', text:'三角审计三模型并行±0.02校验 偏差超阈值即触发熔断'},
+        {src:'📁 几何算力底座/IPD向量库', text:'0.50稳态中轴线是全域认知压舱石 跨领域映射通用锚点'},
+        {src:'📁 MoodMind/情绪韵律库', text:'押韵八拍 Flow节奏 蓝调音阶 抒情旋律 情绪稳态'},
+        {src:'📁 AirMind/航空调度', text:'CAPM资本资产定价模型 Beta系统性风险度量 风险溢价6%'},
+        {src:'📁 GameMind/营销认知漏斗', text:'AARRR用户增长模型 认知-兴趣-决策-行动-留存五阶段转化'},
+        {src:'📁 FinanceMind/MM定理', text:'MM税盾模型最优杠杆锁定0.50 债务税盾价值=Tc×D'},
+        {src:'📁 认知画圈实验/圈层挤压', text:'运动-认知耦合3→1→1→3→100架构 圈层稳态半径约束'},
+        {src:'📁 MoodMind/Rap语料库', text:'freestyle即兴battle battle押韵密度>70% beat切换8拍循环'},
+        {src:'📁 几何算力/球面公理', text:'Game-OS 11条球面公理 公理一致性校验半径R=0.15'}
+    ];
+
+    const SKELETON_NODES = [
+        {key:'原始输入', type:'found', label:'📥 原始输入'},
+        {key:'粗滤降噪', type:'node', label:'🧹 粗滤降噪'},
+        {key:'标签分拣', type:'edge', label:'🏷️ 标签分拣'},
+        {key:'四维校验', type:'node', label:'🧮 四维校验'},
+        {key:'公理终审', type:'edge', label:'🔒 公理终审'},
+        {key:'三层存储', type:'node', label:'💾 三层存储'},
+        {key:'KMP索引', type:'found', label:'🔍 KMP索引'}
+    ];
+
+    function kmpSearch(pattern, text){
+        const n = text.length, m = pattern.length;
+        if(m===0||n<m) return -1;
+        const fail = new Array(m).fill(0);
+        for(let i=1,j=0;i<m;i++){
+            while(j>0&&pattern[i]!==pattern[j]) j=fail[j-1];
+            if(pattern[i]===pattern[j]) fail[i]=++j;
+        }
+        for(let i=0,j=0;i<n;i++){
+            while(j>0&&text[i]!==pattern[j]) j=fail[j-1];
+            if(text[i]===pattern[j]){ j++; if(j===m) return i-m+1; }
+        }
+        return -1;
+    }
+
+    window.quickKMP = function(kw){ $('kmpInput').value=kw; runKMP(); };
+    window.runKMP = function(){
+        const kw = $('kmpInput').value.trim();
+        if(!kw){ alert('请输入检索关键词'); return; }
+        log(`🔍 KMP骨架检索启动，关键词：「${kw}」沿公共骨架路径调取...`,'log-info');
+        const chain = $('skeletonChain');
+        chain.innerHTML = '';
+        SKELETON_NODES.forEach((n,idx)=>{
+            const el = document.createElement('span');
+            el.className = 'puzzle-piece ' + n.type;
+            el.textContent = n.label;
+            el.style.animationDelay = (idx*0.08)+'s';
+            chain.appendChild(el);
+            if(idx < SKELETON_NODES.length-1){
+                const ar = document.createElement('span');
+                ar.className = 'puzzle-arrow';
+                ar.textContent = '▸';
+                chain.appendChild(ar);
+            }
+        });
+        setTimeout(()=>{
+            document.querySelectorAll('.puzzle-piece').forEach((el,i)=>{
+                setTimeout(()=>{
+                    el.classList.add('matched');
+                    if(el.textContent.includes(kw) || kw.length>0 && SKELETON_NODES[i].key==='公理终审' && (kw==='凯利'||kw==='WACC'||kw==='稳态'||kw==='三角审计'||kw==='几何算力')){
+                        el.classList.add('found');
+                    }
+                }, i*80);
+            });
+        }, 50);
+
+        const pool = [...results.longterm, ...results.buffer, ...LEGACY_DATA.map(d=>d.text + ' ['+d.src+']')];
+        const hits = [];
+        pool.forEach((txt,i)=>{
+            const idx = kmpSearch(kw, txt);
+            if(idx >= 0){
+                const src = LEGACY_DATA.find(d=>txt.includes(d.text))?.src || (results.longterm.includes(txt)?'🔵长期热库':results.buffer.includes(txt)?'🟡缓冲温库':'📦冷库');
+                hits.push({text:txt, pos:idx, src});
+            }
+        });
+
+        $('kmpStats').style.display = 'flex';
+        $('kmpPath').textContent = SKELETON_NODES.length;
+        $('kmpHit').textContent = hits.length;
+
+        const resultsDiv = $('kmpResults');
+        resultsDiv.innerHTML = '';
+        if(hits.length===0){
+            resultsDiv.innerHTML = '<div class="kmp-noresult">🧩 沿骨架路径未匹配到相关片段，请尝试其他关键词或检查拼写</div>';
+            log(`KMP检索完成：未找到「${kw}」相关记忆片段`,'log-warn');
+        } else {
+            // ★★★ 优化 3：KMP 匹配词高亮（带 ✨ 标记） ★★★
+            hits.forEach((h,i)=>{
+                setTimeout(()=>{
+                    const div = document.createElement('div');
+                    div.className = 'kmp-result-item';
+                    const hlStart = h.pos;
+                    const hlEnd = Math.min(h.pos+kw.length, h.text.length);
+                    const before = h.text.substring(0,hlStart);
+                    const match = h.text.substring(hlStart,hlEnd);
+                    const after = h.text.substring(hlEnd);
+                    div.innerHTML = `<div class="src">${h.src} · 匹配位置 ${h.pos}</div><div class="txt">${before}<span class="hl">✨ ${match}</span>${after}</div>`;
+                    resultsDiv.appendChild(div);
+                    requestAnimationFrame(()=>div.classList.add('show'));
+                }, i*100 + 600);
+            });
+            log(`KMP骨架检索完成：沿7节点骨架路径定位到 ${hits.length} 条相关片段`,'log-ok');
+            generateAesCandidates(hits.slice(0,5));
+        }
+    };
+
+    // ★★★ 优化 4：候选来源透明化 ★★★
+    function generateAesCandidates(hits) {
+        const list = $('aesCandidates');
+        list.innerHTML = '';
+        aesSelected.clear();
+        const kw = $('kmpInput').value.trim() || '未知';
+        const candidates = hits.map((h, i) => {
+            const start = Math.max(0, h.pos - 10);
+            const end = Math.min(h.text.length, h.pos + kw.length + 10);
+            const context = (start > 0 ? '...' : '') + h.text.substring(start, end) + (end < h.text.length ? '...' : '');
+            return {
+                id: i,
+                text: h.text.length > 50 ? h.text.substring(0, 50) + '...' : h.text,
+                score: Math.round(60 + Math.random() * 35),
+                cat: Math.random() > 0.5 ? '跨域映射' : '韵律匹配',
+                reason: `匹配关键词「${kw}」· 位置 ${h.pos} · 上下文: "${context}"`,
+                src: h.src
+            };
+        });
+        candidates.forEach(c => {
+            const scoreCls = c.score >= 85 ? 'score-high' : c.score >= 70 ? 'score-mid' : 'score-low';
+            const div = document.createElement('div');
+            div.className = 'candidate-item';
+            div.innerHTML = `
+                <div class="cand-check" data-id="${c.id}" onclick="toggleAes(this,${c.id})">✓</div>
+                <div class="cand-text">
+                    ${c.text}
+                    <span class="cand-tag" style="background:rgba(244,114,182,0.12);color:#f472b6;border:1px solid rgba(244,114,182,0.25)">${c.cat}</span>
+                    <div style="font-size:9px;color:#22d3ee;margin-top:4px;opacity:0.8;">
+                        🔍 ${c.reason}
+                        <span style="color:rgba(255,255,255,0.3);margin-left:8px;">📁 ${c.src}</span>
+                    </div>
+                </div>
+                <div class="cand-score ${scoreCls}">${c.score}</div>
+            `;
+            list.appendChild(div);
+        });
+        logAes(`🤖 机器生成 ${candidates.length} 条跨域相似度候选 · 匹配关键词「${kw}」· 相似度60%-95% · 等待人类审美裁决`);
+    }
+
+    // 审美经验判定操作台
+    let aesSelected = new Set();
+    window.toggleAes = function(el, id){
+        el.classList.toggle('checked');
+        if(el.classList.contains('checked')) aesSelected.add(id); else aesSelected.delete(id);
+    };
+    window.aesDecision = function(action){
+        const list = $('aesCandidates');
+        const items = list.querySelectorAll('.candidate-item');
+        if(items.length===0){ logAes('⚠️ 暂无候选，请先运行KMP检索或净化流程生成候选'); return; }
+        const checked = aesSelected.size;
+        const total = items.length;
+        if(action==='approve'){
+            logAes(`<span class="ok">✓ 审美通过</span> ${checked||total} 条候选 · 经验确认·已写入长期热库`);
+        } else if(action==='reject'){
+            logAes(`<span class="no">✗ 审美否决</span> ${checked||total} 条候选 · 主观不认可·已移交冷库归档`);
+        } else {
+            logAes(`<span class="wait">⏸ 暂缓观察</span> ${checked||total} 条候选 · 存入缓冲温库·等待更多证据`);
+        }
+        list.innerHTML = ''; aesSelected.clear();
+    };
+    function logAes(msg){
+        const box = $('aesLog');
+        const t = new Date();
+        const ts = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}`;
+        box.innerHTML = `<div>[${ts}] ${msg}</div>` + box.innerHTML;
+    }
+
+    // 顶层全局战略决策操作台
+    let currentStrategy = 'balanced';
+    const STRAT_CONFIG = {
+        conservative: { rap:20, lyric:65, cash:15, name:'防御型', color:'#60a5fa' },
+        balanced:     { rap:35, lyric:50, cash:15, name:'均衡型', color:'#fbbf24' },
+        aggressive:   { rap:60, lyric:25, cash:15, name:'进取型', color:'#ef4444' }
+    };
+    window.selectStrategy = function(type){
+        currentStrategy = type;
+        document.querySelectorAll('.strategy-card').forEach(c=>c.classList.remove('selected'));
+        document.querySelector('.strategy-card.'+type).classList.add('selected');
+        const cfg = STRAT_CONFIG[type];
+        $('allocRap').style.width = cfg.rap+'%'; $('allocRap').textContent = cfg.rap+'%';
+        $('allocLyric').style.width = cfg.lyric+'%'; $('allocLyric').textContent = cfg.lyric+'%';
+        $('allocCash').style.width = cfg.cash+'%'; $('allocCash').textContent = cfg.cash+'%';
+        logStrat(`📊 方案切换至【${cfg.name}】· Rap ${cfg.rap}% · 蓝筹 ${cfg.lyric}% · 现金 ${cfg.cash}% · 待君主锁定`);
+    };
+
+    // ★★★ 优化 5：锁定配置视觉反馈 ★★★
+    window.lockStrategy = function() {
+        const cfg = STRAT_CONFIG[currentStrategy];
+        const grid = document.getElementById('stratGrid');
+        const bar = document.querySelector('.allocation-bar');
+        // 锁定界面
+        grid.classList.add('locked');
+        bar.classList.add('locked');
+        // 在分配栏上方添加锁定徽章
+        const existingBadge = document.querySelector('.lock-badge');
+        if (!existingBadge) {
+            const badge = document.createElement('span');
+            badge.className = 'lock-badge';
+            badge.textContent = '🔒 已锁定';
+            const titleEl = document.querySelector('.manual-strat-block .manual-title');
+            if (titleEl) titleEl.appendChild(badge);
+        }
+        // 禁用锁定按钮
+        const lockBtn = document.querySelector('.btn-approve[onclick*="lockStrategy"]');
+        if (lockBtn) {
+            lockBtn.disabled = true;
+            lockBtn.textContent = '🔒 已锁定';
+            lockBtn.style.opacity = '0.6';
+            lockBtn.style.cursor = 'not-allowed';
+        }
+        // 启用重置按钮（解锁）
+        const resetBtn = document.querySelector('.btn-defer[onclick*="resetStrategy"]');
+        if (resetBtn) {
+            resetBtn.textContent = '↺ 解锁重置';
+            resetBtn.style.opacity = '1';
+        }
+        logStrat(`<span class="ok">🔒 君主令已签发</span> ·【${cfg.name}】配置锁定 · Rap ${cfg.rap}% / 蓝筹 ${cfg.lyric}% / 现金 ${cfg.cash}% · 全系统执行中`);
+    };
+
+    window.resetStrategy = function() {
+        const grid = document.getElementById('stratGrid');
+        const bar = document.querySelector('.allocation-bar');
+        // 解锁界面
+        grid.classList.remove('locked');
+        bar.classList.remove('locked');
+        // 移除锁定徽章
+        const badge = document.querySelector('.lock-badge');
+        if (badge) badge.remove();
+        // 恢复锁定按钮
+        const lockBtn = document.querySelector('.btn-approve[onclick*="lockStrategy"]');
+        if (lockBtn) {
+            lockBtn.disabled = false;
+            lockBtn.textContent = '🔒 锁定配置（君主令）';
+            lockBtn.style.opacity = '1';
+            lockBtn.style.cursor = 'pointer';
+        }
+        // 恢复重置按钮
+        const resetBtn = document.querySelector('.btn-defer[onclick*="resetStrategy"]');
+        if (resetBtn) {
+            resetBtn.textContent = '↺ 重置方案';
+            resetBtn.style.opacity = '1';
+        }
+        selectStrategy('balanced');
+        logStrat('↺ 配置方案已重置为均衡型默认值 · 已解锁');
+    };
+
+    function logStrat(msg){
+        const box = $('stratLog');
+        const t = new Date();
+        const ts = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}`;
+        box.innerHTML = `<div>[${ts}] ${msg}</div>` + box.innerHTML;
+    }
+
+    window.addEventListener('load',()=>{
+        initCanvas();
+        setTimeout(resizeCanvas, 300);
+        startCountdown();
+        updateStorageDashboard();
+        switchMusic('rap');
+        console.log('%c🧠 MemoryBase V1.0 · Batch 3 三级仓储+曲风隔离 initialized','color:#f472b6;font-weight:bold;font-size:13px;');
+    });
+})();
+</script>
+</body>
+</html>
