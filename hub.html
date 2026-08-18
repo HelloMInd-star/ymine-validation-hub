@@ -37,7 +37,7 @@
             pointer-events: none;
         }
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
             position: relative;
             z-index: 1;
@@ -164,16 +164,21 @@
 
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 16px;
             margin-top: 8px;
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1000px) {
+            .card-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (max-width: 700px) {
             .card-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
         }
-        @media (max-width: 500px) {
+        @media (max-width: 450px) {
             .card-grid {
                 grid-template-columns: 1fr;
             }
@@ -201,7 +206,7 @@
             margin-bottom: 10px;
         }
         .card .card-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 4px;
@@ -251,6 +256,10 @@
             border-color: rgba(167,139,250,0.3);
             color: var(--accent-purple);
         }
+        .card .card-tag.gold {
+            border-color: rgba(251,191,36,0.3);
+            color: var(--accent-amber);
+        }
         .card .card-arrow {
             margin-top: 14px;
             font-size: 13px;
@@ -287,6 +296,9 @@
         }
         .card.card-oscillator::before {
             background: linear-gradient(90deg, var(--accent-green), var(--accent-amber));
+        }
+        .card.card-memory::before {
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
         }
 
         .footer {
@@ -335,6 +347,7 @@
             <span class="badge-pill">🧠 向量化</span>
             <span class="badge-pill">⚙️ 状态判定</span>
             <span class="badge-pill">📈 归1验证</span>
+            <span class="badge-pill">💾 记忆基座</span>
         </div>
     </div>
 
@@ -379,7 +392,7 @@
             <div class="card-arrow">▶ 进入模拟器</div>
         </a>
 
-        <!-- ★★★ 卡片 4：归1振荡模拟器（新增） ★★★ -->
+        <!-- 卡片 4：归1振荡模拟器 -->
         <a href="oscillator.html" class="card card-oscillator">
             <div class="card-icon">📈</div>
             <div class="card-title">归1振荡模拟器</div>
@@ -390,6 +403,19 @@
                 <span class="card-tag purple">6 案例</span>
             </div>
             <div class="card-arrow">▶ 进入模拟器</div>
+        </a>
+
+        <!-- ★★★ 卡片 5：MemoryBase 记忆基座（新增） ★★★ -->
+        <a href="MemoryBase/index.html" class="card card-memory">
+            <div class="card-icon">💾</div>
+            <div class="card-title">MemoryBase 记忆基座</div>
+            <div class="card-desc">四级净化漏斗 · 三级热/温/冷仓储 · KMP 骨架检索 · 人工决策台 · 原始记忆 → 结构化知识完整沉淀链路</div>
+            <div class="card-tags">
+                <span class="card-tag purple">净化漏斗</span>
+                <span class="card-tag gold">三层存储</span>
+                <span class="card-tag cyan">KMP 检索</span>
+            </div>
+            <div class="card-arrow">▶ 进入记忆基座</div>
         </a>
 
     </div>
