@@ -135,6 +135,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 <div style="margin-top:6px;font-size:11px;color:var(--text-dim);">⚠️ 当前分流比例：<span id="ratioDisplay">A: 50% / B: 50%</span></div>
 </div></div>
 <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+<!-- ★ 重置按钮会调用新的 async resetExperiment() ★ -->
 <button class="btn btn-success" onclick="resetExperiment()">🔄 重置实验</button>
 <button class="btn btn-outline" onclick="loadExampleData()">📥 加载示例</button>
 <button class="btn btn-outline btn-sm" onclick="clearAllData()" style="color:var(--accent-red);border-color:rgba(239,68,68,0.3);">🗑️ 清空</button>
@@ -198,36 +199,264 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-dim);">📦 纯前端 · localStorage · 零依赖</div>
 </div></div>
 
+<script src="assets/js/mock-api.js"></script>
 <script>
-const STORAGE_KEY='yexp_data';
-function getDefaultData(){return{users:[],conversions:{},groups:{},experimentName:'检索策略对比 v1.2',metricName:'检索准确率',trafficA:50,trafficB:50,history:[],userIdCounter:0,startTime:Date.now()}}
-let data=loadData();
-function loadData(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const p=JSON.parse(raw);if(!p.history)p.history=[];if(!p.userIdCounter)p.userIdCounter=0;if(!p.startTime)p.startTime=Date.now();return p}}catch(e){}return getDefaultData()}
-function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}catch(e){}updateUI()}
-let timerInterval=null;
-function startTimer(){if(timerInterval)clearInterval(timerInterval);timerInterval=setInterval(()=>{const e=Math.floor((Date.now()-data.startTime)/1000);const m=String(Math.floor(e/60)).padStart(2,'0');const s=String(e%60).padStart(2,'0');document.getElementById('timerDisplay').textContent='⏱ 运行中: '+m+':'+s},1000)}
-function getTraffic(){let a=parseInt(document.getElementById('trafficA').value)||50,b=parseInt(document.getElementById('trafficB').value)||50;const t=a+b;if(t===0){a=50;b=50}else{a=Math.round(a/t*100);b=100-a}if(a<1)a=1;if(b<1)b=1;return{a,b}}
-function assignUsers(c){const t=getTraffic();data.trafficA=t.a;data.trafficB=t.b;document.getElementById('trafficA').value=t.a;document.getElementById('trafficB').value=t.b;updateRatioDisplay();for(let i=0;i<c;i++){data.userIdCounter++;const uid='u'+data.userIdCounter;const r=Math.random()*100;const g=r<t.a?'A':'B';data.users.push(uid);data.groups[uid]=g;data.conversions[uid]=false}saveData();logAction('➕ 分配 '+c+' 人');const list=document.getElementById('userList');list.style.background='rgba(251,191,36,0.05)';setTimeout(()=>{list.style.background='transparent'},400)}
-function simulateAction(g){const t=data.users.filter(uid=>data.groups[uid]===g).filter(uid=>!data.conversions[uid]);if(t.length===0){logAction('⚠️ '+g+' 组已全转化');return}const c=t[Math.floor(Math.random()*t.length)];if(Math.random()<0.55){data.conversions[c]=true;logAction('✅ '+g+' 组 '+c+' 转化')}else{logAction('⏳ '+g+' 组 '+c+' 点击未转化')}saveData()}
-function simulateBatch(c){let a=0;for(let i=0;i<c;i++){const p=data.users.filter(uid=>!data.conversions[uid]);if(p.length===0)break;const pick=p[Math.floor(Math.random()*p.length)];if(Math.random()<0.5){data.conversions[pick]=true;a++}}saveData();logAction('🎲 批量 '+c+' 次，转化 '+a+' 人')}
-function resetExperiment(){const n=document.getElementById('expName').value.trim()||'未命名实验',m=document.getElementById('expMetric').value.trim()||'核心指标';const s=calculateStats();if(data.users.length>0){data.history.push({name:n,metric:m,rateA:s.rateA,rateB:s.rateB,lift:s.lift,pValue:s.pValue,bayesFactor:s.bayesFactor,significant:s.significant,timestamp:Date.now(),usersA:s.usersA,usersB:s.usersB,convA:s.convA,convB:s.convB,duration:Math.floor((Date.now()-data.startTime)/1000)})}data.users=[];data.groups={};data.conversions={};data.experimentName=n;data.metricName=m;data.userIdCounter=0;data.startTime=Date.now();saveData();logAction('🔄 已重置');updateUI()}
-function clearAllData(){if(!confirm('确定清空所有数据？'))return;data=getDefaultData();data.startTime=Date.now();saveData();logAction('🗑️ 已清空');updateUI()}
-function loadExampleData(){data.users=[];data.groups={};data.conversions={};data.userIdCounter=0;data.startTime=Date.now();const t=getTraffic();for(let i=0;i<80;i++){data.userIdCounter++;const uid='u'+data.userIdCounter;const r=Math.random()*100;const g=r<t.a?'A':'B';data.users.push(uid);data.groups[uid]=g;data.conversions[uid]=false}data.users.forEach(uid=>{const g=data.groups[uid];const r=g==='A'?0.38:0.52;if(Math.random()<r)data.conversions[uid]=true});saveData();logAction('📥 加载示例数据：80 用户');updateUI()}
-function calculateStats(){const uA=data.users.filter(uid=>data.groups[uid]==='A'),uB=data.users.filter(uid=>data.groups[uid]==='B');const cA=uA.filter(uid=>data.conversions[uid]).length,cB=uB.filter(uid=>data.conversions[uid]).length;const rA=uA.length>0?cA/uA.length:0,rB=uB.length>0?cB/uB.length:0;const lift=rA>0?(rB-rA)/rA:(rB>0?1:0);let pValue=null,ciLower=null,ciUpper=null,bayesFactor=null;const nA=uA.length,nB=uB.length;if(nA>=5&&nB>=5&&cA>0&&cB>0){const pPool=(cA+cB)/(nA+nB);const se=Math.sqrt(pPool*(1-pPool)*(1/nA+1/nB));const z=(rB-rA)/se;pValue=2*(1-normalCDF(Math.abs(z)));const seDiff=Math.sqrt(rA*(1-rA)/nA+rB*(1-rB)/nB);const margin=1.96*seDiff;ciLower=(rB-rA)-margin;ciUpper=(rB-rA)+margin;const d=(rB-rA)/Math.sqrt((rA*(1-rA)+rB*(1-rB))/2);const nEff=1/(1/nA+1/nB);bayesFactor=Math.exp(0.5*d*d*nEff/(1+nEff/100));bayesFactor=Math.min(bayesFactor,100)}const significant=pValue!==null&&pValue<0.05&&lift>0;return{usersA:nA,usersB:nB,convA:cA,convB:cB,rateA:rA,rateB:rB,lift,pValue,ciLower,ciUpper,bayesFactor,significant}}
-function normalCDF(x){const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;const sign=x<0?-1:1;x=Math.abs(x);const t=1/(1+p*x);const y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x/2);return 0.5*(1+sign*(y-0.5)*2)}
-function calcSampleSize(){const mde=parseFloat(document.getElementById('mdeInput').value)||5,baseline=parseFloat(document.getElementById('baselineInput').value)||40;if(mde<=0||baseline<=0||baseline>=100){document.getElementById('sampleResult').textContent='⚠️ 请输入有效值';return}const p1=baseline/100,p2=p1*(1+mde/100),pPool=(p1+p2)/2,zAlpha=1.96,zBeta=0.84;const num=2*pPool*(1-pPool)*Math.pow(zAlpha+zBeta,2);const den=Math.pow(p2-p1,2);const n=Math.ceil(num/den);document.getElementById('sampleResult').textContent=n+' 人'}
-function updateUI(){const uA=data.users.filter(uid=>data.groups[uid]==='A'),uB=data.users.filter(uid=>data.groups[uid]==='B');const cA=uA.filter(uid=>data.conversions[uid]).length,cB=uB.filter(uid=>data.conversions[uid]).length;document.getElementById('countA').textContent=uA.length;document.getElementById('countB').textContent=uB.length;document.getElementById('convA').textContent=cA;document.getElementById('convB').textContent=cB;document.getElementById('userCountBadge').textContent=data.users.length+' 人';const list=document.getElementById('userList');if(data.users.length===0){list.innerHTML='<div class="empty-state"><div class="icon">👤</div>暂无用户</div>'}else{list.innerHTML=data.users.slice(0,50).map(uid=>{const g=data.groups[uid],converted=data.conversions[uid];const sc=converted?'converted':'pending',st=converted?'✅ 已转化':'⏳ 待转化',gc=g==='A'?'group-a':'group-b';return'<div class="user-item"><span class="uid">'+uid+'</span><span class="'+gc+'">['+g+']</span><span class="status '+sc+'">'+st+'</span></div>'}).join('');if(data.users.length>50){list.innerHTML+='<div style="color:var(--text-dim);font-size:11px;padding:6px;text-align:center;">... 还有 '+(data.users.length-50)+' 人</div>'}}const s=calculateStats();animateStat('rateA',(s.rateA*100).toFixed(1)+'%');animateStat('rateB',(s.rateB*100).toFixed(1)+'%');document.getElementById('detailA').textContent=s.convA+' / '+s.usersA;document.getElementById('detailB').textContent=s.convB+' / '+s.usersB;if(s.usersA>0&&s.usersB>0){const lp=s.lift*100;animateStat('lift',(lp>0?'+':'')+lp.toFixed(1)+'%');document.getElementById('liftSub').textContent=s.lift>0?'B 组优于 A 组':(s.lift<0?'A 组优于 B 组':'无差异')}else{document.getElementById('lift').textContent='--';document.getElementById('liftSub').textContent='等待数据'}if(s.pValue!==null){animateStat('pValue',s.pValue.toFixed(4));document.getElementById('pSub').textContent=s.pValue<0.05?'✅ 统计显著':'❌ 不显著'}else{document.getElementById('pValue').textContent='--';document.getElementById('pSub').textContent='样本 ≥ 5 时计算'}if(s.bayesFactor!==null){const bf=s.bayesFactor;animateStat('bayesFactor',bf.toFixed(1));const lbl=bf>10?'💪 强证据支持 H₁':bf>3?'👍 中等证据':'🤔 弱证据';document.getElementById('bayesSub').textContent=lbl}else{document.getElementById('bayesFactor').textContent='--';document.getElementById('bayesSub').textContent='数据支持 H₁ 的程度'}if(s.ciLower!==null&&s.ciUpper!==null){document.getElementById('ciDisplay').textContent=(s.ciLower*100).toFixed(1)+'% ~ '+(s.ciUpper*100).toFixed(1)+'%';document.getElementById('ciSub').textContent='提升率 95% 置信区间'}else{document.getElementById('ciDisplay').textContent='--';document.getElementById('ciSub').textContent='转化 ≥ 5 时计算'}const vpc=parseFloat(document.getElementById('valuePerConv').value)||100;const revA=s.convA*vpc,revB=s.convB*vpc;document.getElementById('expectedRevenue').textContent='¥'+(revB-revA).toFixed(0);const c=document.getElementById('conclusionArea');if(s.usersA<30||s.usersB<30){c.innerHTML='<div class="conclusion insufficient">⏳ 建议每组 ≥ 30 用户 (A:'+s.usersA+', B:'+s.usersB+')</div>'}else if(s.pValue!==null&&s.pValue<0.05&&s.lift>0){c.innerHTML='<div class="conclusion significant">✅ 统计显著！变体 B 优于 A，提升 '+(s.lift*100).toFixed(1)+'%，建议全量推送 (p='+s.pValue.toFixed(4)+')</div>'}else if(s.pValue!==null&&s.pValue<0.05&&s.lift<0){c.innerHTML='<div class="conclusion significant" style="border-color:rgba(239,68,68,0.3);color:var(--accent-red);">⚠️ 统计显著！变体 A 优于 B，建议保留基线 (p='+s.pValue.toFixed(4)+')</div>'}else if(s.pValue!==null){c.innerHTML='<div class="conclusion not-significant">⏸️ 结果不显著 (p='+s.pValue.toFixed(4)+')，建议延长实验</div>'}else{c.innerHTML='<div class="conclusion insufficient">⏳ 等待更多数据...</div>'}renderHistory();updateRatioDisplay()}
-function animateStat(id,val){const el=document.getElementById(id);if(el.textContent!==val){el.textContent=val;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}}
-function renderHistory(){const list=document.getElementById('historyList'),cnt=document.getElementById('historyCount');cnt.textContent=data.history.length+' 条';if(data.history.length===0){list.innerHTML='<div class="empty-state"><div class="icon">📭</div>暂无历史记录</div>';return}list.innerHTML=data.history.slice().reverse().slice(0,20).map(h=>{const lp=h.lift*100;const rc=h.significant?'win':(h.lift!==0?'lose':'none'),rt=h.significant?'✅ 显著':(h.lift!==0?'⏸️ 不显著':'➖ 无差异');const time=new Date(h.timestamp).toLocaleString('zh-CN',{hour12:false});const dur=h.duration?Math.floor(h.duration/60)+'m':'--';return'<div class="history-item"><span class="h-time">'+time+'</span><span class="h-name">'+h.name+'</span><span style="color:var(--text-sec);font-size:11px;">A: '+(h.rateA*100).toFixed(1)+'% / B: '+(h.rateB*100).toFixed(1)+'%</span><span style="color:var(--accent-amber);font-size:11px;">提升 '+(lp>0?'+':'')+lp.toFixed(1)+'%</span><span style="font-size:10px;color:var(--text-dim);">⏱ '+dur+'</span><span class="h-result '+rc+'">'+rt+'</span></div>'}).join('')}
-function updateRatioDisplay(){const a=parseInt(document.getElementById('trafficA').value)||50,b=parseInt(document.getElementById('trafficB').value)||50;const t=a+b,pA=t>0?Math.round(a/t*100):50,pB=100-pA;document.getElementById('ratioDisplay').textContent='A: '+pA+'% / B: '+pB+'%'}
-function logAction(msg){const el=document.getElementById('actionLog');const time=new Date().toLocaleTimeString('zh-CN',{hour12:false});el.textContent='['+time+'] '+msg}
-function openAbout(){document.getElementById('aboutModal').classList.add('open')}
-function closeAbout(){document.getElementById('aboutModal').classList.remove('open')}
-function exportReport(){const s=calculateStats(),n=document.getElementById('expName').value||'未命名实验',m=document.getElementById('expMetric').value||'核心指标',now=new Date().toISOString().slice(0,10);const report='# Y-Exp 实验报告\n\n## 实验信息\n- **实验名称**：'+n+'\n- **核心指标**：'+m+'\n- **报告日期**：'+now+'\n- **实验时长**：'+Math.floor((Date.now()-data.startTime)/60000)+' 分钟\n\n## 实验配置\n- **A 组流量**：'+data.trafficA+'%\n- **B 组流量**：'+data.trafficB+'%\n- **总样本量**：'+data.users.length+' 人\n\n## 实验结果\n| 指标 | A 组 | B 组 |\n|------|------|------|\n| 样本量 | '+s.usersA+' | '+s.usersB+' |\n| 转化数 | '+s.convA+' | '+s.convB+' |\n| 转化率 | '+(s.rateA*100).toFixed(2)+'% | '+(s.rateB*100).toFixed(2)+'% |\n\n## 统计检验\n- **相对提升**：'+(s.lift*100).toFixed(2)+'%\n- **p-value**：'+(s.pValue!==null?s.pValue.toFixed(4):'--')+'\n- **贝叶斯因子 BF₁₀**：'+(s.bayesFactor!==null?s.bayesFactor.toFixed(2):'--')+'\n- **95% 置信区间**：'+(s.ciLower!==null?(s.ciLower*100).toFixed(2)+'% ~ '+(s.ciUpper*100).toFixed(2)+'%':'--')+'\n\n## 结论\n'+(s.significant?'✅ 统计显著，建议全量推送变体 B':'⏸️ 结果不显著，建议延长实验或调整样本量')+'\n\n---\n*报告由 Y-Exp 自动生成 · Y.Mine Labs*';const blob=new Blob([report],{type:'text/markdown;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='experiment-report-'+now+'.md';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);logAction('📥 报告已导出')}
-document.addEventListener('DOMContentLoaded',function(){document.getElementById('expName').value=data.experimentName||'检索策略对比 v1.2';document.getElementById('expMetric').value=data.metricName||'检索准确率';document.getElementById('trafficA').value=data.trafficA||50;document.getElementById('trafficB').value=data.trafficB||50;updateRatioDisplay();updateUI();startTimer();logAction('🧪 Y-Exp v2.0 已加载');calcSampleSize()});
-document.getElementById('trafficA').addEventListener('input',function(){const a=parseInt(this.value)||0,b=100-a;if(b>=0&&b<=100){document.getElementById('trafficB').value=b;updateRatioDisplay()}});
-document.getElementById('trafficB').addEventListener('input',function(){const b=parseInt(this.value)||0,a=100-b;if(a>=0&&a<=100){document.getElementById('trafficA').value=a;updateRatioDisplay()}});
-window.assignUsers=assignUsers;window.simulateAction=simulateAction;window.simulateBatch=simulateBatch;window.resetExperiment=resetExperiment;window.clearAllData=clearAllData;window.loadExampleData=loadExampleData;window.calcSampleSize=calcSampleSize;window.exportReport=exportReport;window.openAbout=openAbout;window.closeAbout=closeAbout;window.saveData=saveData;window.updateUI=updateUI;window.logAction=logAction;
+// ============================================================
+//  Data Layer (unchanged)
+// ============================================================
+const STORAGE_KEY = 'yexp_data';
+function getDefaultData() { return { users: [], conversions: {}, groups: {}, experimentName: '检索策略对比 v1.2', metricName: '检索准确率', trafficA: 50, trafficB: 50, history: [], userIdCounter: 0, startTime: Date.now() }; }
+let data = loadData();
+function loadData() { try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) { const p = JSON.parse(raw); if (!p.history) p.history = []; if (!p.userIdCounter) p.userIdCounter = 0; if (!p.startTime) p.startTime = Date.now(); return p; } } catch (e) { } return getDefaultData(); }
+function saveData() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) { } updateUI(); }
+
+let timerInterval = null;
+function startTimer() { if (timerInterval) clearInterval(timerInterval); timerInterval = setInterval(() => { const e = Math.floor((Date.now() - data.startTime) / 1000); const m = String(Math.floor(e / 60)).padStart(2, '0'); const s = String(e % 60).padStart(2, '0'); document.getElementById('timerDisplay').textContent = '⏱ 运行中: ' + m + ':' + s; }, 1000); }
+
+function getTraffic() { let a = parseInt(document.getElementById('trafficA').value) || 50; let b = parseInt(document.getElementById('trafficB').value) || 50; const t = a + b; if (t === 0) { a = 50; b = 50; } else { a = Math.round(a / t * 100); b = 100 - a; } if (a < 1) a = 1; if (b < 1) b = 1; return { a, b }; }
+
+function assignUsers(c) { const t = getTraffic(); data.trafficA = t.a; data.trafficB = t.b; document.getElementById('trafficA').value = t.a; document.getElementById('trafficB').value = t.b; updateRatioDisplay(); for (let i = 0; i < c; i++) { data.userIdCounter++; const uid = 'u' + data.userIdCounter; const r = Math.random() * 100; const g = r < t.a ? 'A' : 'B'; data.users.push(uid); data.groups[uid] = g; data.conversions[uid] = false; } saveData(); logAction('➕ 分配 ' + c + ' 人'); const list = document.getElementById('userList'); list.style.background = 'rgba(251,191,36,0.05)'; setTimeout(() => { list.style.background = 'transparent'; }, 400); }
+
+function simulateAction(g) { const t = data.users.filter(uid => data.groups[uid] === g).filter(uid => !data.conversions[uid]); if (t.length === 0) { logAction('⚠️ ' + g + ' 组已全转化'); return; } const c = t[Math.floor(Math.random() * t.length)]; if (Math.random() < 0.55) { data.conversions[c] = true; logAction('✅ ' + g + ' 组 ' + c + ' 转化'); } else { logAction('⏳ ' + g + ' 组 ' + c + ' 点击未转化'); } saveData(); }
+
+function simulateBatch(c) { let a = 0; for (let i = 0; i < c; i++) { const p = data.users.filter(uid => !data.conversions[uid]); if (p.length === 0) break; const pick = p[Math.floor(Math.random() * p.length)]; if (Math.random() < 0.5) { data.conversions[pick] = true; a++; } } saveData(); logAction('🎲 批量 ' + c + ' 次，转化 ' + a + ' 人'); }
+
+// ============================================================
+//  🚀 增强版 resetExperiment (接入 MockAPI)
+// ============================================================
+async function resetExperiment() {
+    // 防止重复点击
+    if (window._resetInProgress) {
+        logAction('⏳ 上一个重置请求正在处理中，请稍候...');
+        return;
+    }
+
+    const name = document.getElementById('expName').value.trim() || '未命名实验';
+    const metric = document.getElementById('expMetric').value.trim() || '核心指标';
+
+    // 保存历史（重置前）
+    const stats = calculateStats();
+    if (data.users.length > 0) {
+        data.history.push({
+            name: name,
+            metric: metric,
+            rateA: stats.rateA,
+            rateB: stats.rateB,
+            lift: stats.lift,
+            pValue: stats.pValue,
+            bayesFactor: stats.bayesFactor,
+            significant: stats.significant,
+            timestamp: Date.now(),
+            usersA: stats.usersA,
+            usersB: stats.usersB,
+            convA: stats.convA,
+            convB: stats.convB,
+            duration: Math.floor((Date.now() - data.startTime) / 1000)
+        });
+    }
+
+    // 获取重置按钮
+    const resetBtn = document.querySelector('.btn-success[onclick*="resetExperiment"]');
+    const originalText = resetBtn ? resetBtn.textContent : '🔄 重置实验';
+
+    try {
+        window._resetInProgress = true;
+        if (resetBtn) {
+            resetBtn.disabled = true;
+            resetBtn.textContent = '⏳ 处理中...';
+            resetBtn.style.opacity = '0.7';
+        }
+
+        logAction('📤 发送重置请求到服务器...');
+
+        // ⭐ 调用 MockAPI (1.5秒延迟)
+        const response = await MockAPI.resetExperiment({ delay: 1500 });
+
+        logAction('✅ ' + response.message + ' (请求ID: ' + response.requestId + ')');
+
+        // 执行实际重置
+        data.users = [];
+        data.groups = {};
+        data.conversions = {};
+        data.experimentName = name;
+        data.metricName = metric;
+        data.userIdCounter = 0;
+        data.startTime = Date.now();
+        saveData();
+
+        logAction('🔄 实验数据已重置，历史已保存');
+        updateUI();
+
+        if (resetBtn) {
+            resetBtn.disabled = false;
+            resetBtn.textContent = originalText;
+            resetBtn.style.opacity = '1';
+        }
+
+        showToast('✅ 实验重置成功！', 'success');
+        window._resetInProgress = false;
+
+    } catch (error) {
+        logAction('❌ 重置失败: ' + error.message);
+        showToast('❌ 重置失败: ' + error.message, 'error');
+        if (resetBtn) {
+            resetBtn.disabled = false;
+            resetBtn.textContent = originalText;
+            resetBtn.style.opacity = '1';
+        }
+        window._resetInProgress = false;
+    }
+}
+
+// ============================================================
+//  Toast 通知
+// ============================================================
+function showToast(message, type = 'info') {
+    const existing = document.querySelector('.mock-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'mock-toast';
+    const colors = {
+        success: 'rgba(34,197,94,0.15)',
+        error: 'rgba(239,68,68,0.15)',
+        info: 'rgba(59,130,246,0.15)'
+    };
+    const borderColors = {
+        success: 'rgba(34,197,94,0.4)',
+        error: 'rgba(239,68,68,0.4)',
+        info: 'rgba(59,130,246,0.4)'
+    };
+    const textColors = {
+        success: '#34d399',
+        error: '#f87171',
+        info: '#60a5fa'
+    };
+    toast.style.cssText = `
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        padding: 14px 22px;
+        background: ${colors[type] || colors.info};
+        border: 1px solid ${borderColors[type] || borderColors.info};
+        border-radius: 10px;
+        color: ${textColors[type] || textColors.info};
+        font-size: 13px;
+        font-weight: 600;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        z-index: 9999;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        transform: translateX(0);
+        opacity: 1;
+        max-width: 420px;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(120%)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, 3000);
+}
+
+// ============================================================
+//  Remaining functions (unchanged)
+// ============================================================
+function clearAllData() { if (!confirm('确定清空所有数据？')) return; data = getDefaultData(); data.startTime = Date.now(); saveData(); logAction('🗑️ 已清空'); updateUI(); }
+function loadExampleData() { data.users = []; data.groups = {}; data.conversions = {}; data.userIdCounter = 0; data.startTime = Date.now(); const t = getTraffic(); for (let i = 0; i < 80; i++) { data.userIdCounter++; const uid = 'u' + data.userIdCounter; const r = Math.random() * 100; const g = r < t.a ? 'A' : 'B'; data.users.push(uid); data.groups[uid] = g; data.conversions[uid] = false; } data.users.forEach(uid => { const g = data.groups[uid]; const r = g === 'A' ? 0.38 : 0.52; if (Math.random() < r) data.conversions[uid] = true; }); saveData(); logAction('📥 加载示例数据：80 用户'); updateUI(); }
+
+function calculateStats() { const uA = data.users.filter(uid => data.groups[uid] === 'A'); const uB = data.users.filter(uid => data.groups[uid] === 'B'); const cA = uA.filter(uid => data.conversions[uid]).length; const cB = uB.filter(uid => data.conversions[uid]).length; const rA = uA.length > 0 ? cA / uA.length : 0; const rB = uB.length > 0 ? cB / uB.length : 0; const lift = rA > 0 ? (rB - rA) / rA : (rB > 0 ? 1 : 0); let pValue = null, ciLower = null, ciUpper = null, bayesFactor = null; const nA = uA.length, nB = uB.length; if (nA >= 5 && nB >= 5 && cA > 0 && cB > 0) { const pPool = (cA + cB) / (nA + nB); const se = Math.sqrt(pPool * (1 - pPool) * (1 / nA + 1 / nB)); const z = (rB - rA) / se; pValue = 2 * (1 - normalCDF(Math.abs(z))); const seDiff = Math.sqrt(rA * (1 - rA) / nA + rB * (1 - rB) / nB); const margin = 1.96 * seDiff; ciLower = (rB - rA) - margin; ciUpper = (rB - rA) + margin; const d = (rB - rA) / Math.sqrt((rA * (1 - rA) + rB * (1 - rB)) / 2); const nEff = 1 / (1 / nA + 1 / nB); bayesFactor = Math.exp(0.5 * d * d * nEff / (1 + nEff / 100)); bayesFactor = Math.min(bayesFactor, 100); } const significant = pValue !== null && pValue < 0.05 && lift > 0; return { usersA: nA, usersB: nB, convA: cA, convB: cB, rateA: rA, rateB: rB, lift, pValue, ciLower, ciUpper, bayesFactor, significant }; }
+
+function normalCDF(x) { const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911; const sign = x < 0 ? -1 : 1; x = Math.abs(x); const t = 1 / (1 + p * x); const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x / 2); return 0.5 * (1 + sign * (y - 0.5) * 2); }
+
+function calcSampleSize() { const mde = parseFloat(document.getElementById('mdeInput').value) || 5; const baseline = parseFloat(document.getElementById('baselineInput').value) || 40; if (mde <= 0 || baseline <= 0 || baseline >= 100) { document.getElementById('sampleResult').textContent = '⚠️ 请输入有效值'; return; } const p1 = baseline / 100; const p2 = p1 * (1 + mde / 100); const pPool = (p1 + p2) / 2; const zAlpha = 1.96, zBeta = 0.84; const num = 2 * pPool * (1 - pPool) * Math.pow(zAlpha + zBeta, 2); const den = Math.pow(p2 - p1, 2); const n = Math.ceil(num / den); document.getElementById('sampleResult').textContent = n + ' 人'; }
+
+function updateUI() {
+    const uA = data.users.filter(uid => data.groups[uid] === 'A');
+    const uB = data.users.filter(uid => data.groups[uid] === 'B');
+    const cA = uA.filter(uid => data.conversions[uid]).length;
+    const cB = uB.filter(uid => data.conversions[uid]).length;
+    document.getElementById('countA').textContent = uA.length;
+    document.getElementById('countB').textContent = uB.length;
+    document.getElementById('convA').textContent = cA;
+    document.getElementById('convB').textContent = cB;
+    document.getElementById('userCountBadge').textContent = data.users.length + ' 人';
+    const list = document.getElementById('userList');
+    if (data.users.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">👤</div>暂无用户</div>'; } else { list.innerHTML = data.users.slice(0, 50).map(uid => { const g = data.groups[uid], converted = data.conversions[uid]; const sc = converted ? 'converted' : 'pending', st = converted ? '✅ 已转化' : '⏳ 待转化', gc = g === 'A' ? 'group-a' : 'group-b'; return '<div class="user-item"><span class="uid">' + uid + '</span><span class="' + gc + '">[' + g + ']</span><span class="status ' + sc + '">' + st + '</span></div>'; }).join(''); if (data.users.length > 50) { list.innerHTML += '<div style="color:var(--text-dim);font-size:11px;padding:6px;text-align:center;">... 还有 ' + (data.users.length - 50) + ' 人</div>'; } }
+    const s = calculateStats();
+    animateStat('rateA', (s.rateA * 100).toFixed(1) + '%');
+    animateStat('rateB', (s.rateB * 100).toFixed(1) + '%');
+    document.getElementById('detailA').textContent = s.convA + ' / ' + s.usersA;
+    document.getElementById('detailB').textContent = s.convB + ' / ' + s.usersB;
+    if (s.usersA > 0 && s.usersB > 0) { const lp = s.lift * 100; animateStat('lift', (lp > 0 ? '+' : '') + lp.toFixed(1) + '%'); document.getElementById('liftSub').textContent = s.lift > 0 ? 'B 组优于 A 组' : (s.lift < 0 ? 'A 组优于 B 组' : '无差异'); } else { document.getElementById('lift').textContent = '--'; document.getElementById('liftSub').textContent = '等待数据'; }
+    if (s.pValue !== null) { animateStat('pValue', s.pValue.toFixed(4)); document.getElementById('pSub').textContent = s.pValue < 0.05 ? '✅ 统计显著' : '❌ 不显著'; } else { document.getElementById('pValue').textContent = '--'; document.getElementById('pSub').textContent = '样本 ≥ 5 时计算'; }
+    if (s.bayesFactor !== null) { const bf = s.bayesFactor; animateStat('bayesFactor', bf.toFixed(1)); const lbl = bf > 10 ? '💪 强证据支持 H₁' : bf > 3 ? '👍 中等证据' : '🤔 弱证据'; document.getElementById('bayesSub').textContent = lbl; } else { document.getElementById('bayesFactor').textContent = '--'; document.getElementById('bayesSub').textContent = '数据支持 H₁ 的程度'; }
+    if (s.ciLower !== null && s.ciUpper !== null) { document.getElementById('ciDisplay').textContent = (s.ciLower * 100).toFixed(1) + '% ~ ' + (s.ciUpper * 100).toFixed(1) + '%'; document.getElementById('ciSub').textContent = '提升率 95% 置信区间'; } else { document.getElementById('ciDisplay').textContent = '--'; document.getElementById('ciSub').textContent = '转化 ≥ 5 时计算'; }
+    const vpc = parseFloat(document.getElementById('valuePerConv').value) || 100; const revA = s.convA * vpc, revB = s.convB * vpc; document.getElementById('expectedRevenue').textContent = '¥' + (revB - revA).toFixed(0);
+    const c = document.getElementById('conclusionArea');
+    if (s.usersA < 30 || s.usersB < 30) { c.innerHTML = '<div class="conclusion insufficient">⏳ 建议每组 ≥ 30 用户 (A:' + s.usersA + ', B:' + s.usersB + ')</div>'; } else if (s.pValue !== null && s.pValue < 0.05 && s.lift > 0) { c.innerHTML = '<div class="conclusion significant">✅ 统计显著！变体 B 优于 A，提升 ' + (s.lift * 100).toFixed(1) + '%，建议全量推送 (p=' + s.pValue.toFixed(4) + ')</div>'; } else if (s.pValue !== null && s.pValue < 0.05 && s.lift < 0) { c.innerHTML = '<div class="conclusion significant" style="border-color:rgba(239,68,68,0.3);color:var(--accent-red);">⚠️ 统计显著！变体 A 优于 B，建议保留基线 (p=' + s.pValue.toFixed(4) + ')</div>'; } else if (s.pValue !== null) { c.innerHTML = '<div class="conclusion not-significant">⏸️ 结果不显著 (p=' + s.pValue.toFixed(4) + ')，建议延长实验</div>'; } else { c.innerHTML = '<div class="conclusion insufficient">⏳ 等待更多数据...</div>'; }
+    renderHistory();
+    updateRatioDisplay();
+}
+
+function animateStat(id, val) { const el = document.getElementById(id); if (el.textContent !== val) { el.textContent = val; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } }
+
+function renderHistory() { const list = document.getElementById('historyList'), cnt = document.getElementById('historyCount'); cnt.textContent = data.history.length + ' 条'; if (data.history.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无历史记录</div>'; return; } list.innerHTML = data.history.slice().reverse().slice(0, 20).map(h => { const lp = h.lift * 100; const rc = h.significant ? 'win' : (h.lift !== 0 ? 'lose' : 'none'), rt = h.significant ? '✅ 显著' : (h.lift !== 0 ? '⏸️ 不显著' : '➖ 无差异'); const time = new Date(h.timestamp).toLocaleString('zh-CN', { hour12: false }); const dur = h.duration ? Math.floor(h.duration / 60) + 'm' : '--'; return '<div class="history-item"><span class="h-time">' + time + '</span><span class="h-name">' + h.name + '</span><span style="color:var(--text-sec);font-size:11px;">A: ' + (h.rateA * 100).toFixed(1) + '% / B: ' + (h.rateB * 100).toFixed(1) + '%</span><span style="color:var(--accent-amber);font-size:11px;">提升 ' + (lp > 0 ? '+' : '') + lp.toFixed(1) + '%</span><span style="font-size:10px;color:var(--text-dim);">⏱ ' + dur + '</span><span class="h-result ' + rc + '">' + rt + '</span></div>'; }).join(''); }
+
+function updateRatioDisplay() { const a = parseInt(document.getElementById('trafficA').value) || 50; const b = parseInt(document.getElementById('trafficB').value) || 50; const t = a + b; const pA = t > 0 ? Math.round(a / t * 100) : 50; const pB = 100 - pA; document.getElementById('ratioDisplay').textContent = 'A: ' + pA + '% / B: ' + pB + '%'; }
+
+function logAction(msg) { const el = document.getElementById('actionLog'); const time = new Date().toLocaleTimeString('zh-CN', { hour12: false }); el.textContent = '[' + time + '] ' + msg; }
+
+function openAbout() { document.getElementById('aboutModal').classList.add('open'); }
+function closeAbout() { document.getElementById('aboutModal').classList.remove('open'); }
+
+function exportReport() {
+    const s = calculateStats(), n = document.getElementById('expName').value || '未命名实验', m = document.getElementById('expMetric').value || '核心指标', now = new Date().toISOString().slice(0, 10);
+    const report = '# Y-Exp 实验报告\n\n## 实验信息\n- **实验名称**：' + n + '\n- **核心指标**：' + m + '\n- **报告日期**：' + now + '\n- **实验时长**：' + Math.floor((Date.now() - data.startTime) / 60000) + ' 分钟\n\n## 实验配置\n- **A 组流量**：' + data.trafficA + '%\n- **B 组流量**：' + data.trafficB + '%\n- **总样本量**：' + data.users.length + ' 人\n\n## 实验结果\n| 指标 | A 组 | B 组 |\n|------|------|------|\n| 样本量 | ' + s.usersA + ' | ' + s.usersB + ' |\n| 转化数 | ' + s.convA + ' | ' + s.convB + ' |\n| 转化率 | ' + (s.rateA * 100).toFixed(2) + '% | ' + (s.rateB * 100).toFixed(2) + '% |\n\n## 统计检验\n- **相对提升**：' + (s.lift * 100).toFixed(2) + '%\n- **p-value**：' + (s.pValue !== null ? s.pValue.toFixed(4) : '--') + '\n- **贝叶斯因子 BF₁₀**：' + (s.bayesFactor !== null ? s.bayesFactor.toFixed(2) : '--') + '\n- **95% 置信区间**：' + (s.ciLower !== null ? (s.ciLower * 100).toFixed(2) + '% ~ ' + (s.ciUpper * 100).toFixed(2) + '%' : '--') + '\n\n## 结论\n' + (s.significant ? '✅ 统计显著，建议全量推送变体 B' : '⏸️ 结果不显著，建议延长实验或调整样本量') + '\n\n---\n*报告由 Y-Exp 自动生成 · Y.Mine Labs*';
+    const blob = new Blob([report], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'experiment-report-' + now + '.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    logAction('📥 报告已导出');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('expName').value = data.experimentName || '检索策略对比 v1.2';
+    document.getElementById('expMetric').value = data.metricName || '检索准确率';
+    document.getElementById('trafficA').value = data.trafficA || 50;
+    document.getElementById('trafficB').value = data.trafficB || 50;
+    updateRatioDisplay();
+    updateUI();
+    startTimer();
+    logAction('🧪 Y-Exp v2.0 已加载');
+    calcSampleSize();
+});
+document.getElementById('trafficA').addEventListener('input', function () { const a = parseInt(this.value) || 0; const b = 100 - a; if (b >= 0 && b <= 100) { document.getElementById('trafficB').value = b; updateRatioDisplay(); } });
+document.getElementById('trafficB').addEventListener('input', function () { const b = parseInt(this.value) || 0; const a = 100 - b; if (a >= 0 && a <= 100) { document.getElementById('trafficA').value = a; updateRatioDisplay(); } });
+
+// 暴露全局变量/函数供 HTML onclick 调用
+window.assignUsers = assignUsers;
+window.simulateAction = simulateAction;
+window.simulateBatch = simulateBatch;
+window.resetExperiment = resetExperiment;
+window.clearAllData = clearAllData;
+window.loadExampleData = loadExampleData;
+window.calcSampleSize = calcSampleSize;
+window.exportReport = exportReport;
+window.openAbout = openAbout;
+window.closeAbout = closeAbout;
+window.saveData = saveData;
+window.updateUI = updateUI;
+window.logAction = logAction;
+window.showToast = showToast;
 </script>
 </body>
 </html>
