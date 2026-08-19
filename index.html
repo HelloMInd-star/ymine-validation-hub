@@ -312,6 +312,56 @@
             color: var(--text-primary);
         }
 
+        /* ===== 跨域应用矩阵 ===== */
+        .section-head {
+            margin: 36px 0 6px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .section-head span {
+            display: block;
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-dim);
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 14px 0 8px;
+        }
+        .matrix-card {
+            display: block;
+            padding: 16px 18px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.02);
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .matrix-card:hover {
+            border-color: rgba(167,139,250,0.45);
+            background: rgba(139,92,246,0.06);
+            transform: translateY(-2px);
+        }
+        .matrix-card .mc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .matrix-card .mc-emoji { font-size: 20px; }
+        .matrix-card .mc-domain {
+            font-size: 11px;
+            color: var(--accent-purple);
+            border: 1px solid rgba(167,139,250,0.3);
+            border-radius: 999px;
+            padding: 2px 10px;
+            letter-spacing: 1px;
+        }
+        .matrix-card .mc-name { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+        .matrix-card .mc-desc { font-size: 12.5px; line-height: 1.6; color: var(--text-sec); }
+        .matrix-card .mc-live { margin-top: 10px; font-size: 12px; color: var(--accent-cyan); }
+        @media (max-width: 600px) { .matrix-grid { grid-template-columns: 1fr; } }
+
         @media (max-width: 600px) {
             .intro {
                 flex-direction: column;
@@ -385,7 +435,7 @@
             <strong style="color:var(--text-sec);">148 项单元测试</strong>、
             <strong style="color:var(--text-sec);">41 个跨域实验</strong>、
             <strong style="color:var(--text-sec);">25,424 次实验运行</strong>。
-            已成功迁移至扑克博弈、调酒消费两个场景。
+            内核已成功迁移至 <strong style="color:var(--text-sec);">金融决策、博弈对抗、调酒消费、低空经济、内容市场</strong> 五大场景。
         </p>
     </div>
 
@@ -463,6 +513,47 @@
             <span class="desc">斐波那契-染色体跨域映射 · 核型分析 · 人格遗传模拟</span>
             <a href="Fibonacci-Chromosome_Isomorphism.pdf" target="_blank" class="link">📄 PDF</a>
         </div>
+    </div>
+
+    <!-- ===== 跨域应用矩阵 ===== -->
+    <div class="section-head">🌌 跨域应用矩阵 <span>一套 Game-OS 内核 × 五大应用场景 · 全部在线可交互</span></div>
+    <div class="matrix-grid">
+        <a class="matrix-card" href="https://hellomind-star.github.io/finance-personality/" target="_blank">
+            <div class="mc-head"><span class="mc-emoji">💹</span><span class="mc-domain">金融决策</span></div>
+            <div class="mc-name">人格金融孪生平台</div>
+            <div class="mc-desc">行为数据 → 人格向量 → 投资决策孪生。估值 / 风险压力 / 信息漏斗 / 投行看板，30+ 交互场景全栈在线。</div>
+            <div class="mc-live">Live ↗</div>
+        </a>
+        <a class="matrix-card" href="https://hellomind-star.github.io/airmind-os/" target="_blank">
+            <div class="mc-head"><span class="mc-emoji">🛩️</span><span class="mc-domain">低空经济</span></div>
+            <div class="mc-name">AirMind OS</div>
+            <div class="mc-desc">Kelly 博弈定价 × 空域分级精算 × 应急调度六策略 × V/S/L 算力浓度监控 —— Game-OS 的低空决策中枢形态。</div>
+            <div class="mc-live">Live ↗</div>
+        </a>
+        <a class="matrix-card" href="https://hellomind-star.github.io/poker-egg-fullstack/" target="_blank">
+            <div class="mc-head"><span class="mc-emoji">🃏</span><span class="mc-domain">博弈对抗</span></div>
+            <div class="mc-name">PokerEgg 扑克人格竞技场</div>
+            <div class="mc-desc">16 型人格 AI 牌手 · 全栈德州扑克 · 蒙特卡洛胜率逐街重算，人格化决策可解释输出。</div>
+            <div class="mc-live">Live ↗</div>
+        </a>
+        <a class="matrix-card" href="https://hellomind-star.github.io/ymine-demos/" target="_blank">
+            <div class="mc-head"><span class="mc-emoji">🍸</span><span class="mc-domain">消费体验</span></div>
+            <div class="mc-name">Y.MINE 人格调酒</div>
+            <div class="mc-desc">人格 → 风味/声场/视觉的五感映射 · 分子调酒 × 人格音乐 × 午夜酒馆叙事宇宙。</div>
+            <div class="mc-live">Live ↗</div>
+        </a>
+        <a class="matrix-card" href="https://hellomind-star.github.io/short-drama-mbti/" target="_blank">
+            <div class="mc-head"><span class="mc-emoji">🎬</span><span class="mc-domain">内容市场</span></div>
+            <div class="mc-name">短剧 MBTI 推演器</div>
+            <div class="mc-desc">人格向量 × 平台适配的创作推演，「前额叶(数据) × 边缘系统(直觉)」双引擎发布策略 —— 方法论的内容市场迁移。</div>
+            <div class="mc-live">Live ↗</div>
+        </a>
+        <a class="matrix-card" href="https://hellomind-star.github.io/agent-studio-board/" target="_blank">
+            <div class="mc-head"><span class="mc-emoji">⚙️</span><span class="mc-domain">生产力元工具</span></div>
+            <div class="mc-name">智能工坊 Agent Studio</div>
+            <div class="mc-desc">多模型路由与工作流编排控制台：创意 / 代码 / 润色分工到部署流水线 —— 我指挥 AI 军团的方式。</div>
+            <div class="mc-live">Live ↗</div>
+        </a>
     </div>
 
     <!-- ===== 底部 ===== -->
