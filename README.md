@@ -6,7 +6,7 @@
 
 **建议访问动线**：[`Profile`](https://github.com/HelloMInd-star/Profile)（个人叙事）→ `index`（实验集群总控台）→ 任意实验页动手玩 → 文末 PDF 看学术与设计深度
 
-> 📌 **结构说明**：`index.html` 现为「Y.Mine · 实验集群总控台」着陆页；`hub.html` 保留同内容以兼容旧书签。个人叙事主页已抽离至独立仓库 [Profile](https://github.com/HelloMInd-star/Profile)（Pages：`hellomind-star.github.io/Profile`）。
+> 📌 **结构说明**：`index.html` 现为「Y.Mine · 实验集群总控台」着陆页；`hub.html` 保留同内容以兼容旧书签。个人叙事主页已抽离至独立仓库 [Profile](https://github.com/HelloMInd-star/Profile)（Pages：[hellomind-star.github.io/Profile](https://hellomind-star.github.io/Profile/) 已上线）。
 
 ---
 
