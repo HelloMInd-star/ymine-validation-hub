@@ -62,7 +62,7 @@ Game-OS 决策引擎的**可交互验证集群**。不是 PPT 里的架构图，
 
 | 仓库 | 定位 |
 |---|---|
-| [Profile](https://github.com/HelloMInd-star/Profile) | 个人叙事主页：审计 → 工程 → MBA，一套决策操作系统的由来（独立 Pages 部署） |
+| [Profile](https://github.com/HelloMInd-star/Profile) | 个人叙事主页：财务 → 工程 → MBA，一套决策操作系统的由来（独立 Pages 部署） |
 | [poker-egg-fullstack](https://github.com/HelloMInd-star/poker-egg-fullstack) | 决策引擎 × 扑克博弈：人格化 AI 对手 + Kelly 真胜率面板（前端 + Railway 后端） |
 | [personality-wine-mixing](https://github.com/HelloMInd-star/personality-wine-mixing) | 决策引擎 × 调酒消费：六维人格向量统一契约，46 个纯函数引擎，637 测试用例 |
 | **ymine-validation-hub**（本仓库） | 决策引擎的实验验证与方法论沉淀 |
