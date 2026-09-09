@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>熵值模型 · 状态判定引擎 · Y.Mine Labs</title>
+<script src="src/trace.js"></script>
     <link rel="stylesheet" href="src/theme.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1300,6 +1301,15 @@
         const emoji = stateType === 'converge' ? '🔒' : '🔓';
         entry.innerHTML = `<span class="time">${time}</span> ${emoji} ${stateType==='converge'?'收敛':'发散'} · 置信度 ${conf.toFixed(2)} · 偏离 ${Math.round(prob)}% → <strong style="color:var(--text-primary);">${state}</strong> (${action})`;
         logArea.appendChild(entry);
+        /* 写入统一证据链：收敛/发散 即天然结论 */
+        try {
+            if (window.YTrace) YTrace.log({
+                action: '状态判定',
+                detail: '置信度 ' + conf.toFixed(2) + ' · 偏离 ' + Math.round(prob) + '% → ' + state + ' (' + action + ')',
+                verdict: stateType === 'converge' ? '收敛' : '发散',
+                level: stateType === 'converge' ? 'ok' : 'warn'
+            });
+        } catch (e) {}
         logArea.scrollTop = logArea.scrollHeight;
         while (logArea.children.length > 40) logArea.removeChild(logArea.firstChild);
     }

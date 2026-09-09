@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>🧠 MemoryBase · 公共底层记忆基座 · Y.Mine</title>
+    <script src="../src/trace.js"></script>
     <link rel="stylesheet" href="../src/theme.css" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔺</text></svg>" />
     <style>
@@ -1131,6 +1132,7 @@
 
     function $(id){ return document.getElementById(id); }
     function log(msg, cls='log-info'){
+        try { if (window.YTrace) YTrace.log({ action: String(msg).replace(/[^\u4e00-\u9fa5A-Za-z0-9 .:()\/+%-]/g,'').trim() || String(msg).slice(0,40), detail: String(msg), level: cls && cls.indexOf('err')>-1 ? 'danger' : 'info' }); } catch (e) {}
         const t = new Date();
         const ts = `${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}.${String(t.getMilliseconds()).padStart(3,'0')}`;
         const box = $('logBox');

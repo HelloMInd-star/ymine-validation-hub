@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>归1振荡模拟器 · Y.Mine Labs</title>
+    <script src="src/trace.js"></script>
     <link rel="stylesheet" href="src/theme.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -737,6 +738,7 @@
     //  三、核心更新函数
     // ============================================================
     function updateDashboard(caseKey, mode) {
+        try { if (window.YTrace) YTrace.log({ action: '切换收敛场景', detail: String(caseKey) + ' / ' + String(mode) }); } catch (e) {}
         const data = caseData[caseKey];
         if (!data) return;
         const modeA = (mode === 'A' || mode === 'compare');
@@ -817,6 +819,7 @@
     //  四、滑块联动
     // ============================================================
     function applySliderEffects() {
+        try { if (window.YTrace) YTrace.log({ action: '调整振荡参数', detail: '滑块参数变更' }); } catch (e) {}
         const priceVal = parseInt(document.getElementById('priceSlider').value);
         const costVal = parseInt(document.getElementById('costSlider').value);
         document.getElementById('priceLabel').textContent = priceVal + '%';

@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MindSpeak Embedding Lab · MS-Lab V1.0 · Game-OS</title>
+  <script src="src/trace.js"></script>
     <link rel="stylesheet" href="src/theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔺</text></svg>" />
 <style>
@@ -541,8 +542,9 @@ footer{text-align:center;font-size:11px;color:var(--text-dim);padding:24px 0;fon
 function animateCount(el,target,dur=1200){const start=performance.now();const isFloat=target%1!==0;function step(t){const p=Math.min(1,(t-start)/dur);const ease=1-Math.pow(1-p,3);const v=target*ease;el.textContent=isFloat?v.toFixed(3):Math.floor(v).toLocaleString();if(p<1)requestAnimationFrame(step);else el.textContent=isFloat?target.toFixed(3):target.toLocaleString()}requestAnimationFrame(step)}
 window.addEventListener('load',()=>{setTimeout(()=>{animateCount(document.getElementById('kpiVec'),0);animateCount(document.getElementById('kpiTok'),28450);document.getElementById('kpiCost').textContent='¥ 0.69';document.getElementById('thrFill').style.width='96%'},200)});
 
-function launchDashboard(){setTimeout(()=>{document.getElementById('schedStatus').innerHTML='🟢 Streamlit 已打开';document.getElementById('schedStatus').style.color='var(--accent-green)'},800)}
-function enterPrivate(){alert('🔒 private_engine 为私有数理内核区\n\n本公开层不提供128bit高精度算子、通用数学求解库、KMP底层源码、算力博弈算法的实现代码，仅预留接口注释。')}
+function launchDashboard(){try{if(window.YTrace)YTrace.log({action:'启动观测台',detail:'Streamlit 数据观测台',verdict:'已启动'})}catch(e){}setTimeout(()=>{document.getElementById('schedStatus').innerHTML='🟢 Streamlit 已打开';document.getElementById('schedStatus').style.color='var(--accent-green)'},800)}
+function enterPrivate(){try{if(window.YTrace)YTrace.log({action:'访问私有内核',detail:'private_engine 私有数理内核区',verdict:'已拦截',level:'warn'})}catch(e){}
+alert('🔒 private_engine 为私有数理内核区\n\n本公开层不提供128bit高精度算子、通用数学求解库、KMP底层源码、算力博弈算法的实现代码，仅预留接口注释。')}
 </script>
 </body>
 </html>

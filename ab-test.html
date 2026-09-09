@@ -326,6 +326,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 </div>
 </div></div>
 
+<script src="src/trace.js"></script>
 <script src="assets/js/mock-api.js"></script>
 <script>
 // ============================================================
@@ -528,7 +529,24 @@ function renderHistory() {
 
 function updateRatioDisplay() { const a = parseInt(document.getElementById('trafficA').value) || 50; const b = parseInt(document.getElementById('trafficB').value) || 50; const t = a + b; const pA = t > 0 ? Math.round(a / t * 100) : 50; const pB = 100 - pA; document.getElementById('ratioDisplay').textContent = 'A: ' + pA + '% / B: ' + pB + '%'; }
 
-function logAction(msg) { const el = document.getElementById('actionLog'); const time = new Date().toLocaleTimeString('zh-CN', { hour12: false }); el.textContent = '[' + time + '] ' + msg; }
+function logAction(msg) {
+    const el = document.getElementById('actionLog');
+    const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    el.textContent = '[' + time + '] ' + msg;
+    /* 写入统一证据链：action 去 emoji 便于检索，原文存 detail */
+    try {
+        if (window.YTrace) {
+            const txt = String(msg);
+            const clean = txt.replace(/[^\u4e00-\u9fa5A-Za-z0-9 .:()\/+%-]/g, '').trim();
+            let verdict = '';
+            if (/熔断|中止|拦截|阻断/.test(txt)) verdict = '熔断';
+            else if (/失败|错误|异常|✗/.test(txt)) verdict = '异常';
+            else if (/完成|通过|胜出|成功|✅/.test(txt)) verdict = '通过';
+            YTrace.log({ action: clean || txt.slice(0, 40), detail: txt, verdict: verdict,
+                         level: /失败|错误|异常/.test(txt) ? 'danger' : (verdict ? 'ok' : 'info') });
+        }
+    } catch (e) {}
+}
 
 function openAbout() { document.getElementById('aboutModal').classList.add('open'); }
 function closeAbout() { document.getElementById('aboutModal').classList.remove('open'); }
