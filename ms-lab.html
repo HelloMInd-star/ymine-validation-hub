@@ -4,27 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MindSpeak Embedding Lab · MS-Lab V1.0 · Game-OS</title>
+    <link rel="stylesheet" href="src/theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔺</text></svg>" />
 <style>
-:root {
-  --bg-deep: #060a1f;
-  --bg-mid:  #0a0f2c;
-  --panel:   rgba(14,20,42,0.85);
-  --border:  rgba(129,140,248,0.18);
-  --accent-blue:  #60a5fa;
-  --accent-cyan:  #22d3ee;
-  --accent-purple:#a78bfa;
-  --accent-pink:  #f472b6;
-  --accent-green: #34d399;
-  --accent-amber: #fbbf24;
-  --accent-red:   #f87171;
-  --text-primary: #e8edff;
-  --text-sec:     #94a3b8;
-  --text-dim:     #4a5580;
-  --breakeven: 0.48;
-  --steady:    0.50;
-  --fuse:      0.68;
-}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -552,15 +534,9 @@ footer{text-align:center;font-size:11px;color:var(--text-dim);padding:24px 0;fon
   🧠 MindSpeak Embedding Lab · MS-Lab v1.0-Batch3 · Game-OS V3.0
 </footer>
 
+<script src="src/starfield.js"></script>
 <script>
-(function(){
-  const c=document.getElementById('stars'),x=c.getContext('2d');
-  function resize(){c.width=innerWidth;c.height=innerHeight}
-  resize();addEventListener('resize',resize);
-  const stars=Array.from({length:180},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+0.2,a:Math.random(),s:Math.random()*0.02+0.005,c:['#ffffff','#c7d2fe','#93c5fd','#c4b5fd'][Math.floor(Math.random()*4)]}));
-  function draw(){x.clearRect(0,0,c.width,c.height);stars.forEach(s=>{s.a+=s.s;if(s.a>1||s.a<0)s.s=-s.s;x.globalAlpha=Math.max(0.1,s.a);x.fillStyle=s.c;x.beginPath();x.arc(s.x,s.y,s.r,0,Math.PI*2);x.fill()});requestAnimationFrame(draw)}
-  draw();
-})();
+    Starfield.mount("#stars", { count: 180, radiusMax: 1.6 });
 
 function animateCount(el,target,dur=1200){const start=performance.now();const isFloat=target%1!==0;function step(t){const p=Math.min(1,(t-start)/dur);const ease=1-Math.pow(1-p,3);const v=target*ease;el.textContent=isFloat?v.toFixed(3):Math.floor(v).toLocaleString();if(p<1)requestAnimationFrame(step);else el.textContent=isFloat?target.toFixed(3):target.toLocaleString()}requestAnimationFrame(step)}
 window.addEventListener('load',()=>{setTimeout(()=>{animateCount(document.getElementById('kpiVec'),0);animateCount(document.getElementById('kpiTok'),28450);document.getElementById('kpiCost').textContent='¥ 0.69';document.getElementById('thrFill').style.width='96%'},200)});
