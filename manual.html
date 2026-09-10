@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>产品说明与实验手册 · Y.Mine</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
+<link rel="stylesheet" href="src/theme.css">
+<script src="src/shell.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg-deep); color: var(--text-primary);
+    font-family: 'Segoe UI', system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.75; font-size: 14.5px;
+  }
+  .layout { display: flex; max-width: 1500px; margin: 0 auto; align-items: flex-start; }
+
+  /* ---- 左侧树形目录（飞书式） ---- */
+  .sidebar {
+    width: 268px; flex-shrink: 0; position: sticky; top: 46px; height: calc(100vh - 46px);
+    overflow-y: auto; padding: 22px 12px 60px; border-right: 1px solid var(--border);
+  }
+  .side-title { font-size: 11px; color: var(--text-dim); letter-spacing: 1.4px;
+                padding: 0 10px 10px; text-transform: uppercase; font-weight: 600; }
+  .tree-item {
+    display: block; padding: 7px 11px; margin: 1px 0; border-radius: 7px;
+    color: var(--text-sec); text-decoration: none; font-size: 13px;
+    cursor: pointer; transition: all .14s; border-left: 2px solid transparent;
+  }
+  .tree-item:hover { background: rgba(129,140,248,.1); color: var(--text-primary); }
+  .tree-item.on { background: rgba(129,140,248,.2); color: var(--text-primary);
+                  border-left-color: var(--accent-purple); font-weight: 600; }
+  .tree-item.lv1 { padding-left: 11px; font-weight: 600; color: var(--text-primary); }
+  .tree-item.lv2 { padding-left: 26px; font-size: 12.5px; }
+
+  /* ---- 右侧内容 ---- */
+  .content { flex: 1; min-width: 0; padding: 30px 46px 100px; max-width: 940px; }
+  h1 { font-size: 27px; margin: 0 0 6px; letter-spacing: -.3px; }
+  h2 { font-size: 20px; margin: 42px 0 14px; padding-top: 14px;
+       border-top: 1px solid var(--border); color: var(--text-primary); }
+  h3 { font-size: 15.5px; margin: 26px 0 10px; color: var(--accent-blue); }
+  h4 { font-size: 14px; margin: 18px 0 8px; color: var(--accent-cyan); }
+  p { margin: 10px 0; color: var(--text-sec); }
+  ul, ol { color: var(--text-sec); padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--text-primary); }
+  code {
+    background: rgba(129,140,248,.13); padding: 1.5px 6px; border-radius: 4px;
+    font-family: 'Cascadia Code', Consolas, monospace; font-size: 12.5px;
+    color: var(--accent-cyan);
+  }
+  .lead { font-size: 15.5px; color: var(--text-sec); margin-bottom: 4px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px; margin: 16px 0;
+  }
+  .card.warn { border-left: 3px solid var(--accent-amber); }
+  .card.danger { border-left: 3px solid var(--accent-red); }
+  .card.ok { border-left: 3px solid var(--accent-green); }
+  .card.info { border-left: 3px solid var(--accent-blue); }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  th { text-align: left; padding: 9px 11px; background: rgba(129,140,248,.1);
+       color: var(--text-primary); font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 11px; border-bottom: 1px solid var(--border); color: var(--text-sec); }
+  tr:hover td { background: rgba(129,140,248,.04); }
+
+  .stage-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 18px 0; }
+  .stage-node {
+    display: flex; align-items: center; gap: 7px; padding: 9px 15px;
+    border-radius: 10px; background: var(--panel); border: 1px solid var(--border);
+    font-size: 13px; text-decoration: none; color: var(--text-sec); transition: all .16s;
+  }
+  .stage-node:hover { border-color: var(--accent-purple); color: var(--text-primary);
+                      transform: translateY(-1px); }
+  .arrow { color: var(--text-dim); font-size: 15px; }
+
+  .term { margin: 16px 0; padding: 14px 17px; background: var(--panel);
+          border-radius: 10px; border-left: 3px solid var(--accent-purple); }
+  .term-name { font-weight: 600; color: var(--text-primary); font-size: 14.5px; }
+  .term-aka { font-size: 12px; color: var(--text-dim); margin-left: 8px; }
+  .term-body { margin-top: 7px; color: var(--text-sec); font-size: 13.5px; }
+
+  .steps { counter-reset: s; }
+  .step { position: relative; padding-left: 34px; margin: 13px 0; }
+  .step::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: 0; top: 1px; width: 23px; height: 23px;
+    background: rgba(129,140,248,.2); color: var(--accent-blue);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 5px; font-size: 11.5px;
+    background: rgba(129,140,248,.16); color: var(--accent-blue); margin-right: 5px;
+  }
+  .badge.new { background: rgba(52,211,153,.16); color: var(--accent-green); }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .content { padding: 22px 18px 80px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- ===== 左侧树形目录 ===== -->
+  <nav class="sidebar">
+    <div class="side-title">目录</div>
+    <a class="tree-item lv1" href="#what">这是什么</a>
+    <a class="tree-item lv2" href="#position">定位与能力边界</a>
+    <a class="tree-item lv2" href="#lifecycle">决策生命周期</a>
+    <a class="tree-item lv2" href="#start">五分钟上手</a>
+    <a class="tree-item lv1" href="#manual">实验手册</a>
+    <a class="tree-item lv2" href="#m-ab">A/B 实验评估台</a>
+    <a class="tree-item lv2" href="#m-entropy">状态判定实验台</a>
+    <a class="tree-item lv2" href="#m-osc">归一收敛模拟器</a>
+    <a class="tree-item lv2" href="#m-vec">向量检索实验室</a>
+    <a class="tree-item lv2" href="#m-mem">记忆基座 MemoryBase</a>
+    <a class="tree-item lv1" href="#stats">统计方法</a>
+    <a class="tree-item lv2" href="#s-freq">频率派：z 检验</a>
+    <a class="tree-item lv2" href="#s-bayes">贝叶斯派：P(B&gt;A)</a>
+    <a class="tree-item lv2" href="#s-fix">已修复的统计缺陷</a>
+    <a class="tree-item lv1" href="#terms">术语表</a>
+    <a class="tree-item lv2" href="#t-core">核心概念</a>
+    <a class="tree-item lv2" href="#t-tech">技术术语</a>
+    <a class="tree-item lv1" href="#faq">常见问题</a>
+  </nav>
+
+  <!-- ===== 右侧内容 ===== -->
+  <main class="content">
+
+    <h1>产品说明与实验手册</h1>
+    <p class="lead">一套在本地浏览器里运行的算法策略验证工具集。所有计算都在你的机器上完成，数据不出浏览器。</p>
+
+    <!-- ========== 这是什么 ========== -->
+    <h2 id="what">这是什么</h2>
+    <p>
+      Y.Mine Validation Hub 是一组<strong>独立的算法验证实验</strong>。它不采集真实用户流量，
+      而是让你在一个可控环境里，把"某个策略改动到底有没有效果"这件事<strong>算清楚</strong>。
+    </p>
+    <p>
+      典型用途：你想改结算按钮的位置，预估能把转化率从 5% 提到 6%。
+      那么这个改动<strong>需要多少样本才能验证</strong>？跑完之后<strong>到底算不算真的有效</strong>？
+      如果有效，<strong>有多大把握</strong>？——这些都是可以在这里算出来的。
+    </p>
+
+    <h3 id="position">定位与能力边界</h3>
+    <div class="card info">
+      <table>
+        <tr><th style="width:120px">能做</th><th style="width:120px">不能做</th><th>说明</th></tr>
+        <tr>
+          <td>✅ 统计验证</td><td>❌ 采集流量</td>
+          <td>它不接真实用户。你需要把已有的转化数据填进来，或者用它生成的模拟数据做推演。</td>
+        </tr>
+        <tr>
+          <td>✅ 样本量规划</td><td>❌ 替代 A/B 平台</td>
+          <td>它算的是"需要多少样本"，不是帮你把流量分给用户——那是线上实验平台的事。</td>
+        </tr>
+        <tr>
+          <td>✅ 结果判定</td><td>❌ 保证业务成功</td>
+          <td>统计显著 ≠ 业务上有价值。它告诉你"这个差异是不是随机波动"，不告诉你"值不值得做"。</td>
+        </tr>
+        <tr>
+          <td>✅ 本地运行</td><td>❌ 多人协作</td>
+          <td>数据存在浏览器 localStorage，换台电脑或换个浏览器就没了。</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3 id="lifecycle">决策生命周期：四个阶段</h3>
+    <p>五个实验不是并列罗列，而是<strong>一条完整决策链路的四个阶段</strong>：</p>
+    <div class="stage-flow">
+      <a class="stage-node" href="entropy-model.html">👁 1 状态感知</a>
+      <span class="arrow">→</span>
+      <a class="stage-node" href="ab-test.html">🧪 2 决策实验</a>
+      <span class="arrow">→</span>
+      <a class="stage-node" href="oscillator.html">📈 3 收敛验证</a>
+      <span class="arrow">→</span>
+      <a class="stage-node" href="ms-lab.html">🧠 4 记忆沉淀</a>
+    </div>
+    <table>
+      <tr><th style="width:96px">阶段</th><th style="width:170px">实验</th><th>要回答的问题</th></tr>
+      <tr><td>👁 状态感知</td><td>状态判定实验台</td><td>系统现在处于收敛态还是发散态？偏离稳态有多远？</td></tr>
+      <tr><td>🧪 决策实验</td><td>A/B 实验评估台</td><td>两个方案哪个更好？需要多少样本？差异是真还是随机？</td></tr>
+      <tr><td>📈 收敛验证</td><td>归一收敛模拟器</td><td>系统能否收敛到目标区间？换一个领域还成立吗？</td></tr>
+      <tr><td>🧠 记忆沉淀</td><td>向量检索实验室<br>记忆基座 MemoryBase</td><td>结论怎么存下来？下次能不能复用？</td></tr>
+    </table>
+    <p style="font-size:13px;color:var(--text-dim)">
+      每个实验在 URL 上独立可分享，但在证据链上同属一条链路——你在任何一个实验里的操作都会汇入
+      总控台的<strong>全站证据链</strong>，可回溯、可导出。
+    </p>
+
+    <h3 id="start">五分钟上手</h3>
+    <div class="steps">
+      <div class="step"><strong>先做样本量规划</strong>。进入 A/B 实验评估台，在"样本量估算"里填入你的基准转化率（比如 5%）和你希望检出的最小提升（比如 10%），得到每组需要的样本数。<em>这一步一定要先做</em>，它决定了你要跑多久。</div>
+      <div class="step"><strong>导入或模拟数据</strong>。点"加载示例数据"可以快速看到完整流程；也可以手动分配用户并模拟转化。</div>
+      <div class="step"><strong>看两个数字</strong>。p 值告诉你"是不是随机波动"，P(B&gt;A) 告诉你"B 更好的把握有多大"。两者都过关再下结论。</div>
+      <div class="step"><strong>别提前停</strong>。样本量没跑够就下结论，得到的显著性是无效的。详见<a href="#faq">常见问题</a>。</div>
+      <div class="step"><strong>导出留痕</strong>。结果可以导出为报告；所有操作会自动进入总控台的证据链。</div>
+    </div>
+
+    <!-- ========== 实验手册 ========== -->
+    <h2 id="manual">实验手册</h2>
+
+    <h3 id="m-ab">🧪 A/B 实验评估台 <span class="badge new">已修正统计</span></h3>
+    <p>原名 <code>Y-Exp 实验评估框架</code>。做两件事：<strong>跑之前算需要多少样本</strong>，<strong>跑之后判定结果是否可信</strong>。</p>
+    <table>
+      <tr><th style="width:150px">功能</th><th>说明</th></tr>
+      <tr><td>确定性哈希分流</td><td>同一个用户 ID 永远分到同一组，不会因刷新而跳组</td></tr>
+      <tr><td>样本量估算</td><td>输入基准转化率 + 最小可检测效应(MDE)，输出每组所需样本</td></tr>
+      <tr><td>z 检验</td><td>两比例检验，输出 z 值、p 值、95% 置信区间</td></tr>
+      <tr><td>贝叶斯判定</td><td>P(B&gt;A)、选 B 的期望损失、后验可信区间</td></tr>
+      <tr><td>证据链</td><td>所有操作自动记录，可导出 CSV</td></tr>
+    </table>
+    <div class="card warn">
+      <strong>判定时看两个数，别只看一个：</strong>
+      <ul style="margin:8px 0 0">
+        <li><strong>p 值 &lt; 0.05</strong> —— 说明差异不太可能是随机波动造成的</li>
+        <li><strong>P(B&gt;A) &gt; 95%</strong> 且 <strong>期望损失 &lt; 0.0005</strong> —— 说明选 B 的实际风险足够小</li>
+      </ul>
+    </div>
+
+    <h3 id="m-entropy">⚙️ 状态判定实验台</h3>
+    <p>原名 <code>熵值模型 · 状态判定引擎</code>。它把系统状态映射到一个 0–1 的连续轴上，用阈值判定当前是<strong>收敛</strong>还是<strong>发散</strong>。</p>
+    <table>
+      <tr><th style="width:150px">阈值</th><th>含义</th></tr>
+      <tr><td><code>0.50</code> 稳态</td><td>系统处于平衡位置，无需干预</td></tr>
+      <tr><td><code>0.68</code> 熔断</td><td>偏离过大，触发中断，不再输出决策</td></tr>
+      <tr><td><code>0.48</code> 盈亏平衡</td><td>收益与成本相抵的临界点</td></tr>
+    </table>
+    <p>每次判定会自动写入证据链，结论标记为"收敛"或"发散"，可在总控台按阶段筛选查看。</p>
+
+    <h3 id="m-osc">📈 归一收敛模拟器</h3>
+    <p>原名 <code>归1振荡模拟器</code>（"归1"已统一为"归一"）。用 6 组真实商业案例，验证<strong>不同领域的系统是否都能收敛到 [0.5, 0.68] 这个区间</strong>。</p>
+    <p>这是"跨领域可迁移"这个主张的检验场——如果不同领域的系统都往同一个区间收敛，说明这个区间不是巧合，而是某种共性规律。</p>
+    <div class="card warn">
+      <strong>注意：</strong>这个页面是全站唯一依赖外部 CDN 的（Chart.js + Font Awesome）。
+      离线打开时图表可能显示不出来，但其余功能正常。
+    </div>
+
+    <h3 id="m-vec">🧠 向量检索实验室</h3>
+    <p>原名 <code>MindSpeak Embedding Lab</code>。演示一套向量记忆系统怎么运作：文本转向量后如何存储、加密、检索、鉴权。</p>
+    <table>
+      <tr><th style="width:150px">机制</th><th>说明</th></tr>
+      <tr><td>四级向量仓储</td><td>按热度分层存储，热的快、冷的省</td></tr>
+      <tr><td>AES-256-GCM 加密</td><td>向量数据加密存储，解密需密钥</td></tr>
+      <tr><td>KMP 骨架检索</td><td>经典字符串匹配算法，用于结构化骨架的快速定位</td></tr>
+      <tr><td>RBAC 三级权限</td><td>不同角色可见范围不同</td></tr>
+    </table>
+
+    <h3 id="m-mem">🧠 记忆基座 MemoryBase</h3>
+    <p>原名 <code>MemoryBase · 公共底层记忆基座</code>。这是全站最大的单个页面（约 1900 行），演示从<strong>原始记忆到结构化知识</strong>的完整沉淀链路。</p>
+    <ul>
+      <li><strong>五级仓储</strong> —— 从原始记录到提炼知识的层级结构</li>
+      <li><strong>三级权限</strong> —— 公开 / 隔离 / 私有</li>
+      <li><strong>曲风与人格隔离</strong> —— 不同上下文的记忆互不污染</li>
+    </ul>
+
+    <!-- ========== 统计方法 ========== -->
+    <h2 id="stats">统计方法</h2>
+    <p>
+      统计计算<strong>全部在本地完成，不需要联网</strong>。联网能解决的是"采集更多真实数据"，
+      解决不了"算得更准"——数学公式本身就确定了精度。
+    </p>
+
+    <h3 id="s-freq">频率派：两比例 z 检验</h3>
+    <p>用于判定两个转化率之间的差异是否"统计显著"。采用 <strong>pooled（合并方差）</strong> 版本，这是假设检验的标准做法：</p>
+    <div class="card">
+      <code>z = (p̂<sub>B</sub> − p̂<sub>A</sub>) / √[ p̄(1−p̄)(1/n<sub>A</sub> + 1/n<sub>B</sub>) ]</code>
+      <p style="margin:10px 0 0;font-size:13px">
+        其中 <code>p̄ = (c<sub>A</sub>+c<sub>B</sub>)/(n<sub>A</sub>+n<sub>B</sub>)</code> 为合并转化率。
+        双侧 p 值 <code>= 2 × (1 − Φ(|z|))</code>，α=0.05 时若 p&lt;0.05 则判为显著。
+      </p>
+    </div>
+    <p>正态累积分布 <code>Φ(z)</code> 使用 Abramowitz &amp; Stegun 7.1.26 的 erf 有理逼近，全域最大误差 &lt; 1e-6。</p>
+
+    <h3 id="s-bayes">贝叶斯派：P(B&gt;A) 与期望损失</h3>
+    <p>回答一个更直白的问题：<strong>"B 真的比 A 好的概率有多大？"</strong></p>
+    <div class="card">
+      <p style="margin:0 0 8px">采用业界通行的 <strong>Beta-Binomial 共轭模型</strong>，Beta(1,1) 无信息先验：</p>
+      <code>后验<sub>A</sub> ~ Beta(1 + 转化数<sub>A</sub>, 1 + 未转化数<sub>A</sub>)</code><br>
+      <code>后验<sub>B</sub> ~ Beta(1 + 转化数<sub>B</sub>, 1 + 未转化数<sub>B</sub>)</code>
+      <p style="margin:10px 0 0;font-size:13px">
+        P(B&gt;A) 用闭式解精确计算，已与 20 万次 Monte Carlo 交叉验证一致（差异 &lt; 0.003）。
+      </p>
+    </div>
+    <p><strong>期望损失</strong>是选错方案要付出的代价：<code>E[max(0, θ<sub>A</sub> − θ<sub>B</sub>)]</code>。
+    即便 P(B&gt;A) 没到 95%，只要期望损失足够小，选 B 的风险也是可控的。</p>
+
+    <h3 id="s-fix">已修复的统计缺陷 <span class="badge new">重要</span></h3>
+    <div class="card danger">
+      <p style="margin:0 0 10px"><strong>缺陷一：p 值计算错误（会把显著的结果误判为不显著）</strong></p>
+      <p style="margin:0 0 8px;font-size:13.5px">
+        原先的 <code>normalCDF</code> 误用了 A&amp;S 7.1.26 系数——该组系数配套 <code>exp(−x²)</code>，
+        代码里却写成 <code>exp(−x²/2)</code>，且漏掉了 erf → Φ 的自变量换算。
+      </p>
+      <table style="margin:10px 0">
+        <tr><th>z</th><th>正确 Φ(z)</th><th>原实现输出</th></tr>
+        <tr><td>0</td><td>0.50000</td><td style="color:var(--accent-red)">0.00000</td></tr>
+        <tr><td>1.96</td><td>0.97500</td><td>0.96195</td></tr>
+        <tr><td>2.576</td><td>0.99500</td><td>0.99256</td></tr>
+      </table>
+      <p style="margin:0;font-size:13.5px">
+        <strong>后果：</strong>在 <code>z ∈ [1.96, 2.13]</code>（真实 p 在 0.033～0.05 之间）这个区间内，
+        真实显著的结果会被误报为"不显著"。这恰恰是 A/B 测试最常见、业务决策最密集的判定区间。
+      </p>
+    </div>
+    <div class="card danger">
+      <p style="margin:0 0 10px"><strong>缺陷二：贝叶斯因子是无效的自造公式</strong></p>
+      <p style="margin:0 0 8px;font-size:13.5px">
+        原先的 BF₁₀ 是一个自造启发式，且被 <code>Math.min(..., 100)</code> 硬截断，
+        导致<strong>样本量从 1500 增到 5000，它返回同一个值</strong>——
+        这违背了贝叶斯因子随证据累积而增大的基本性质。
+      </p>
+      <p style="margin:0;font-size:13.5px">
+        现已替换为业界标准的 <strong>P(B&gt;A) + 期望损失</strong>。同等效应量下，
+        样本从 500 增到 12000 时，P(B&gt;A) 从 74% 单调升至 99.9%，符合预期。
+      </p>
+    </div>
+    <div class="card ok">
+      <p style="margin:0;font-size:13.5px">
+        <strong>已验证无误的部分：</strong>样本量公式经三个独立来源交叉验证
+        （本仓库实现 / Evan Miller 完整公式 / 教科书公式），
+        在 6 组参数下差异均在 4 人以内，<strong>原实现是正确的</strong>。
+      </p>
+    </div>
+
+    <!-- ========== 术语表 ========== -->
+    <h2 id="terms">术语表</h2>
+
+    <h3 id="t-core">核心概念</h3>
+
+    <div class="term">
+      <div class="term-name">归一（0–1 轴）<span class="term-aka">旧称：归1</span></div>
+      <div class="term-body">
+        把所有决策指标统一映射到 0 到 1 的连续区间上比较。这样不同量纲、不同领域的指标就能放在同一把尺子上看。
+        本仓库中 <code>0.5</code> 为稳态，<code>0.68</code> 为熔断阈值。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">熔断<span class="term-aka">旧称：七层熔断 / Game-OS 熔断机制</span></div>
+      <div class="term-body">
+        在决策输出前设置的多道校验关卡，任一关卡不通过则中止输出、不再往下走。
+        目的是在系统偏离过大时及时刹车，而不是输出一个看起来合理但实际错误的结果。
+        <br><span style="color:var(--text-dim);font-size:12.5px">
+        （该概念在 poker-egg、personality-wine-mixing 等关联仓库中亦在使用）</span>
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">决策生命周期<span class="term-aka">旧称：Game-OS 决策流水线</span></div>
+      <div class="term-body">
+        一次完整决策要经历的四个阶段：状态感知 → 决策实验 → 收敛验证 → 记忆沉淀。
+        这五个实验分别对应其中一个阶段。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">协同校验<span class="term-aka">旧称：三角审计 / 三模型冗余</span></div>
+      <div class="term-body">
+        不用单一模型下结论，而是让多个独立来源相互印证，只有多数一致才采纳。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">决策路径展开<span class="term-aka">旧称：决策锥体</span></div>
+      <div class="term-body">
+        把一个决策点可能导向的各种后续路径展开成树状结构，用于评估每条路径的风险与收益。
+      </div>
+    </div>
+
+    <h3 id="t-tech">技术术语</h3>
+
+    <div class="term">
+      <div class="term-name">MDE（最小可检测效应）</div>
+      <div class="term-body">
+        你希望这个实验至少能检出的最小提升幅度。MDE 设得越小，需要的样本量越大——
+        样本量大致与 MDE 的平方成反比（MDE 减半，样本量约翻 4 倍）。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">P(B&gt;A)</div>
+      <div class="term-body">
+        在贝叶斯框架下，"B 方案真的优于 A 方案"的后验概率。
+        比 p 值更直观：p 值回答"这个差异像不像随机波动"，P(B&gt;A) 直接回答"B 更好的把握有多大"。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">期望损失</div>
+      <div class="term-body">
+        万一选错了，平均会损失多少转化率。它是个"风险定价"指标——
+        即便把握不是十成，只要损失足够小，也值得上。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">证据链（Trace）</div>
+      <div class="term-body">
+        跨实验的操作留痕总线。你在任何一个实验里的关键动作都会汇入同一条链路，
+        在总控台可按阶段筛选、查看、导出 CSV。上限 500 条，超出丢弃最旧。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">KMP</div>
+      <div class="term-body">
+        一种经典字符串匹配算法（Knuth-Morris-Pratt），能在不回溯的情况下快速定位子串。
+        本仓库用于结构化骨架的快速检索。
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="term-name">RBAC</div>
+      <div class="term-body">
+        基于角色的权限控制（Role-Based Access Control）。不同角色能看什么、能改什么，由角色决定而非逐个用户配置。
+      </div>
+    </div>
+
+    <!-- ========== FAQ ========== -->
+    <h2 id="faq">常见问题</h2>
+
+    <h4>为什么不能提前看结果、看到显著就停？</h4>
+    <p>
+      这叫"偷看"（peeking）。每看一次就等于做一次检验，看得越多，
+      撞上一次偶然显著的概率就越大——原本 5% 的假阳性率会被放大到远高于 5%。
+      正确做法是<strong>先算好样本量，跑够再下结论</strong>。
+      如果确实需要中途停止，应该用专门的序贯检验方法，本仓库暂未提供。
+    </p>
+
+    <h4>统计显著了，是不是就该上线？</h4>
+    <p>
+      不一定。统计显著只说明"差异不太可能是随机波动"，不代表"差异有业务价值"。
+      还要看：<strong>提升幅度是否值得</strong>（0.1% 的显著提升可能不值得付出改造成本）、
+      <strong>期望损失是否足够小</strong>、以及<strong>这个结论在新用户身上是否还成立</strong>。
+    </p>
+
+    <h4>数据存在哪里？会上传吗？</h4>
+    <p>
+      存在浏览器的 localStorage 里，<strong>不上传、不联网</strong>。
+      换浏览器、换设备、清缓存都会导致数据丢失。重要结果请及时导出。
+    </p>
+
+    <h4>为什么改个名字、改个配色要改好几个文件？</h4>
+    <p>
+      已经不用了。配色现在集中在 <code>src/theme.css</code>，一处改全站生效；
+      页面命名集中在 <code>src/shell.js</code> 的 <code>NAMES</code> 表。
+    </p>
+
+    <h4>还需要联网吗？</h4>
+    <p>
+      除"归一收敛模拟器"这一个页面依赖 CDN（Chart.js + Font Awesome）外，
+      其余全部零依赖、可离线运行。统计计算不需要联网。
+    </p>
+
+  </main>
+</div>
+
+<script>
+/* 目录高亮：滚动时同步左侧树形目录的当前位置 */
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.tree-item'));
+  var targets = links.map(function (a) {
+    return document.getElementById(a.getAttribute('href').slice(1));
+  });
+
+  function onScroll() {
+    var y = window.scrollY + 90, cur = 0;
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i] && targets[i].offsetTop <= y) cur = i;
+    }
+    links.forEach(function (a, i) { a.classList.toggle('on', i === cur); });
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* 点击平滑滚动，避开顶部 sticky 导航条 */
+  links.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var t = document.getElementById(a.getAttribute('href').slice(1));
+      if (!t) return;
+      e.preventDefault();
+      window.scrollTo({ top: t.offsetTop - 70, behavior: 'smooth' });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

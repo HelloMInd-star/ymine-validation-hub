@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>归1振荡模拟器 · Y.Mine Labs</title>
+    <title>归一收敛模拟器 · Y.Mine</title>
+    <script src="src/shell.js" data-stage="converge"></script>
     <script src="src/trace.js"></script>
     <link rel="stylesheet" href="src/theme.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -383,7 +384,7 @@
         <div class="topbar-left">
             <span class="logo">📈</span>
             <div>
-                <div class="brand">归1振荡模拟器 <span class="hl">·</span> A/B测试版</div>
+                <div class="brand">归一振荡模拟器 <span class="hl">·</span> A/B测试版</div>
                 <div class="sub">三体耦合 × 检验相似 × 策略对比</div>
             </div>
             <span class="badge-version">v1.0</span>
@@ -408,7 +409,7 @@
     <div class="grid-main">
         <!-- 图表 -->
         <div class="card">
-            <h3><i class="fas fa-chart-line"></i> 归1振荡轨迹（成本/营收比）</h3>
+            <h3><i class="fas fa-chart-line"></i> 归一振荡轨迹（成本/营收比）</h3>
             <div class="chart-wrapper">
                 <canvas id="oscillationChart"></canvas>
             </div>
@@ -422,7 +423,7 @@
                     <div class="value" id="currentRatio">0.86 / 0.84 <span class="small">模拟值</span></div>
                 </div>
                 <div class="status-item">
-                    <div class="label">归1状态</div>
+                    <div class="label">归一状态</div>
                     <div id="statusBadge" style="font-size: 18px; font-weight: 600; color: var(--accent-amber);">⚠️ 紧贴地面飞行</div>
                 </div>
                 <div class="status-item">
@@ -471,14 +472,14 @@
             <button class="btn-ab active-ab" id="abBtnA" data-ab="A">方案A · 控价</button>
             <button class="btn-ab" id="abBtnB" data-ab="B">方案B · 降价冲量</button>
             <button class="btn-ab" id="abBtnCompare" data-ab="compare"><i class="fas fa-code-branch"></i> 对比模式</button>
-            <span class="ab-decision" id="abDecision"><strong>推荐：</strong>方案A（归1风险可控）</span>
+            <span class="ab-decision" id="abDecision"><strong>推荐：</strong>方案A（归一风险可控）</span>
         </div>
     </div>
 
     <!-- ===== 底部三栏 ===== -->
     <div class="footer-grid">
         <div class="note-card">
-            <h4>归1路径</h4>
+            <h4>归一路径</h4>
             <p id="pathDesc">低价走量→无限逼近区间，但永远无法稳定进入</p>
         </div>
         <div class="note-card">
@@ -487,12 +488,12 @@
         </div>
         <div class="note-card">
             <h4>检验相似结论</h4>
-            <p id="similarityDesc">该案例已验证归1模型的<span class="highlight">跨域泛化能力</span></p>
+            <p id="similarityDesc">该案例已验证归一模型的<span class="highlight">跨域泛化能力</span></p>
         </div>
     </div>
 
     <div class="footer-bottom">
-        📈 归1振荡模拟器 · Y.Mine Labs · 基于 0.5/0.68 归1区间 · 6 个真实商业案例
+        📈 归一振荡模拟器 · Y.Mine Labs · 基于 0.5/0.68 归一区间 · 6 个真实商业案例
     </div>
 </div>
 
@@ -521,9 +522,9 @@
             tags: ['价格 9.9', '规模走量', '时间因子弱'],
             friction: '极高 (15-25%)',
             payback: '18-24个月',
-            path: '低价走量→无限逼近归1，但抗扰动裕度为零',
+            path: '低价走量→无限逼近归一，但抗扰动裕度为零',
             frictionDesc: '价格锁死 + 租金刚性 + 竞品博弈',
-            similarity: '验证了"归1吸引子"的真实存在，但暴露了低维控制变量的极限'
+            similarity: '验证了"归一吸引子"的真实存在，但暴露了低维控制变量的极限'
         },
         xingbake: {
             label: '星巴克',
@@ -541,7 +542,7 @@
             payback: '18-24个月',
             path: '高客单价 × 多维变量 → 天然落在｜0.5-0.68｜区间',
             frictionDesc: '选址/装修/人力摩擦极高，但品牌溢价覆盖',
-            similarity: '证明了"高维控制变量"能让归1成为系统默认状态'
+            similarity: '证明了"高维控制变量"能让归一成为系统默认状态'
         },
         mixue: {
             label: '蜜雪冰城',
@@ -568,7 +569,7 @@
             ratiosB: [0.80, 0.85, 0.92, 0.96, 0.94, 0.90, 0.86, 0.83, 0.82, 0.81, 0.80, 0.80],
             currentA: 0.78,
             currentB: 0.80,
-            statusA: '⚠️ 跃迁期（放大→归1）',
+            statusA: '⚠️ 跃迁期（放大→归一）',
             statusB: '⚠️ 重资产杠杆放大波动',
             statusClassA: 'badge-warn',
             statusClassB: 'badge-danger',
@@ -577,7 +578,7 @@
             payback: '36个月+',
             path: '先加杠杆（3800亿投入），再等AI收入补回利润',
             frictionDesc: '资本开支巨大，利润承压，赌时间窗口',
-            similarity: 'B2B重资产归1路径的典型观测样本'
+            similarity: 'B2B重资产归一路径的典型观测样本'
         },
         tencentcloud: {
             label: '腾讯云',
@@ -586,16 +587,16 @@
             ratiosB: [0.82, 0.78, 0.74, 0.70, 0.68, 0.66, 0.65, 0.64, 0.63, 0.62, 0.62, 0.63],
             currentA: 0.58,
             currentB: 0.63,
-            statusA: '✅ 已完成归1（规模化盈利）',
+            statusA: '✅ 已完成归一（规模化盈利）',
             statusB: '✅ 仍在安全区内，但安全边际收窄',
             statusClassA: 'badge-safe',
             statusClassB: 'badge-warn',
             tags: ['瘦身战略', 'AI需求', '全球化'],
             friction: '中 (10-18%)',
             payback: '12-18个月',
-            path: '先砍低质量项目→提升毛利→归1→再扩规模',
+            path: '先砍低质量项目→提升毛利→归一→再扩规模',
             frictionDesc: '已消化低质量项目，摩擦降低',
-            similarity: '验证了"先归1、后放大"的稳健路径'
+            similarity: '验证了"先归一、后放大"的稳健路径'
         },
         aws: {
             label: 'AWS',
@@ -613,7 +614,7 @@
             payback: '12个月以内',
             path: '规模 × 生态 → 长期稳定在｜0.5-0.68｜区间内',
             frictionDesc: '规模摊薄一切，摩擦极低',
-            similarity: '归1模型的"黄金基准"'
+            similarity: '归一模型的"黄金基准"'
         }
     };
 
@@ -773,7 +774,7 @@
                 statusEl.textContent = '✅ 双方案均处于｜0.5-0.68｜安全区内';
                 statusEl.className = 'badge-safe';
             } else if (worst <= 0.85) {
-                statusEl.textContent = '⚠️ 至少一个方案逼近归1，但裕度不足';
+                statusEl.textContent = '⚠️ 至少一个方案逼近归一，但裕度不足';
                 statusEl.className = 'badge-warn';
             } else {
                 statusEl.textContent = '❌ 至少一个方案处于发散态，需重构';
@@ -781,13 +782,13 @@
             }
             let decision = '';
             if (currentValA < 0.68 && currentValB >= 0.68) {
-                decision = '方案A（控价）归1风险更低，推荐采用';
+                decision = '方案A（控价）归一风险更低，推荐采用';
             } else if (currentValB < 0.68 && currentValA >= 0.68) {
                 decision = '方案B（降价）在当前约束下更优，但需监控摩擦';
             } else if (currentValA < 0.68 && currentValB < 0.68) {
                 decision = '双方案均安全，建议选择收敛速度更快的方案';
             } else {
-                decision = '⚠️ 双方案均面临归1压力，建议重新设计控制变量';
+                decision = '⚠️ 双方案均面临归一压力，建议重新设计控制变量';
             }
             document.getElementById('abDecision').innerHTML = '<strong>推荐：</strong>' + decision;
         } else if (mode === 'A') {
@@ -795,7 +796,7 @@
                 currentValA.toFixed(2) + ' <span class="small">方案A</span>';
             statusEl.textContent = data.statusA;
             statusEl.className = data.statusClassA;
-            document.getElementById('abDecision').innerHTML = '<strong>方案A：</strong>控价策略，归1路径稳健';
+            document.getElementById('abDecision').innerHTML = '<strong>方案A：</strong>控价策略，归一路径稳健';
         } else {
             document.getElementById('currentRatio').innerHTML =
                 currentValB.toFixed(2) + ' <span class="small">方案B</span>';

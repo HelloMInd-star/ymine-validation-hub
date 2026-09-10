@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Y.Mine · 实验集群总控台</title>
+    <title>Y.Mine · 实验集群总控台 —— 算法策略实验验证平台</title>
+    <script src="src/shell.js"></script>
     <link rel="stylesheet" href="src/theme.css" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔺</text></svg>" />
     <style>
@@ -337,13 +338,14 @@
 
     <div class="hero">
         <div class="icon">🧪</div>
-        <h1>算法策略 · 实验验证平台</h1>
+        <h1>实验集群总控台</h1>
+        <p style="color:var(--text-sec);font-size:13px;margin:6px 0 0">算法策略 · 实验验证平台 · 本地运行</p>
         <p>科学评估每一次迭代 — 从 LLM 提示词到 RL 超参数，从检索策略到推荐算法，用数据驱动决策。</p>
         <div class="badge-group">
             <span class="badge-pill active">📊 实验评估</span>
             <span class="badge-pill">🧠 向量化</span>
             <span class="badge-pill">⚙️ 状态判定</span>
-            <span class="badge-pill">📈 归1验证</span>
+            <span class="badge-pill">📈 归一验证</span>
             <span class="badge-pill">💾 记忆基座</span>
         </div>
     </div>
@@ -353,7 +355,7 @@
         <!-- 卡片 1：Y-Exp -->
         <a href="ab-test.html" class="card card-ab">
             <div class="card-icon">📊</div>
-            <div class="card-title">Y-Exp 实验评估框架</div>
+            <div class="card-title">A/B 实验评估台</div>
             <div class="card-desc">A/B 分流 · 转化追踪 · z-test + 贝叶斯因子 · 置信区间 · 样本量规划</div>
             <div class="card-tags">
                 <span class="card-tag amber">A/B 测试</span>
@@ -366,7 +368,7 @@
         <!-- ★★★ 卡片 2：MindSpeak 向量实验室 ★★★ -->
         <a href="ms-lab.html" class="card card-ms">
             <div class="card-icon">🧠</div>
-            <div class="card-title">MindSpeak 向量实验室</div>
+            <div class="card-title">向量检索实验室</div>
             <div class="card-desc">
                 四层跨域数理同构翻译引擎 · 语言→算法映射验证<br/>
                 <span style="color:var(--accent-pink);">↔ 与 Y-Exp 联动：结构验证 → A/B 测试</span>
@@ -383,7 +385,7 @@
         <!-- 卡片 3：熵值模型 -->
         <a href="entropy-model.html" class="card card-entropy">
             <div class="card-icon">⚙️</div>
-            <div class="card-title">熵值模型 · 状态判定引擎</div>
+            <div class="card-title">状态判定实验台</div>
             <div class="card-desc">0.5/0.68 阈值 · 正态分布 · 1/e 参考线 · 判定矩阵 · 收敛/发散态切换</div>
             <div class="card-tags">
                 <span class="card-tag amber">阈值系统</span>
@@ -393,13 +395,13 @@
             <div class="card-arrow">▶ 进入模拟器</div>
         </a>
 
-        <!-- 卡片 4：归1振荡模拟器 -->
+        <!-- 卡片 4：归一收敛模拟器 -->
         <a href="oscillator.html" class="card card-oscillator">
             <div class="card-icon">📈</div>
-            <div class="card-title">归1振荡模拟器</div>
-            <div class="card-desc">6 组真实商业案例（瑞幸/星巴克/AWS/阿里云等）· A/B 策略对比 · 归1区间 [0.5, 0.68] 跨域验证</div>
+            <div class="card-title">归一收敛模拟器</div>
+            <div class="card-desc">6 组真实商业案例（瑞幸/星巴克/AWS/阿里云等）· A/B 策略对比 · 归一区间 [0.5, 0.68] 跨域验证</div>
             <div class="card-tags">
-                <span class="card-tag amber">归1验证</span>
+                <span class="card-tag amber">归一验证</span>
                 <span class="card-tag cyan">A/B 对比</span>
                 <span class="card-tag purple">6 案例</span>
             </div>
@@ -409,7 +411,7 @@
         <!-- 卡片 5：MemoryBase -->
         <a href="MemoryBase/index.html" class="card card-memory">
             <div class="card-icon">💾</div>
-            <div class="card-title">MemoryBase 记忆基座</div>
+            <div class="card-title">记忆基座 MemoryBase</div>
             <div class="card-desc">四级净化漏斗 · 三级热/温/冷仓储 · KMP 骨架检索 · 人工决策台 · 原始记忆 → 结构化知识完整沉淀链路</div>
             <div class="card-tags">
                 <span class="card-tag purple">净化漏斗</span>
@@ -439,6 +441,18 @@
             </div>
         </div>
         <div id="traceStats" style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;"></div>
+
+        <!-- 四阶段证据分布（手写 SVG，零依赖） -->
+        <div id="stageFlowHost" style="margin-bottom: 6px;"></div>
+
+        <!-- 证据链时间轴 -->
+        <details style="margin-bottom: 12px;">
+            <summary style="cursor: pointer; font-size: 12.5px; color: var(--text-sec); padding: 6px 0;">
+                📈 展开时间轴视图
+            </summary>
+            <div id="timelineHost" style="margin-top: 10px;"></div>
+        </details>
+
         <div id="traceHost" style="max-height: 320px; overflow-y: auto;"></div>
     </div>
 
@@ -455,6 +469,7 @@
 </div>
 
 <script src="src/trace.js"></script>
+<script src="src/viz.js"></script>
 <script src="src/starfield.js"></script>
 <script>Starfield.mount("#stars", { count: 160, radiusMax: 1.4 });</script>
 
@@ -468,6 +483,19 @@ var TraceUI = (function () {
         if (!host || typeof YTrace === 'undefined') return;
         YTrace.renderPanel(host, { stage: cur || undefined, limit: 60 });
         var st = YTrace.stats();
+
+        /* 渲染四阶段分布图与时间轴（手写 SVG，无外部依赖） */
+        try {
+            if (typeof YViz !== 'undefined' && st.total) {
+                var fh = document.getElementById('stageFlowHost');
+                var th = document.getElementById('timelineHost');
+                if (fh) YViz.stageFlow(fh, st);
+                if (th) YViz.traceTimeline(th, YTrace.query({ stage: cur || undefined, limit: 40 }));
+            } else {
+                var fh2 = document.getElementById('stageFlowHost');
+                if (fh2) fh2.innerHTML = '';
+            }
+        } catch (e) { /* 图表失败不影响文字列表 */ }
         if (!st.total) {
             statsEl.innerHTML = '尚无记录 —— 进入任一实验操作一次，证据链会自动累积到这里。';
             return;

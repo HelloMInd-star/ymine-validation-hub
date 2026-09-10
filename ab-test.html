@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Y-Exp · 实验评估框架</title>
+<title>A/B 实验评估台 · Y.Mine</title>
+    <script src="src/shell.js" data-stage="experiment"></script>
     <link rel="stylesheet" href="src/theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔺</text></svg>" />
 <style>
@@ -270,10 +271,40 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 <div class="stat-card p"><div class="stat-value" id="pValue">--</div><div class="stat-label">p-value</div><div class="stat-sub" id="pSub">样本 ≥ 5 时计算</div></div>
 </div>
 <div class="grid-2" style="margin-top:12px;">
-<div class="stat-card bayes"><div class="stat-value" id="bayesFactor">--</div><div class="stat-label">贝叶斯因子 BF₁₀</div><div class="stat-sub" id="bayesSub">数据支持 H₁ 的程度</div></div>
+<div class="stat-card bayes"><div class="stat-value" id="bayesFactor">--</div><div class="stat-label">B 优于 A 概率 P(B&gt;A)</div><div class="stat-sub" id="bayesSub">贝叶斯后验概率</div></div>
 <div class="stat-card" style="border-color:rgba(167,139,250,0.1);"><div class="stat-value" style="color:var(--accent-purple);font-size:16px;" id="ciDisplay">--</div><div class="stat-label">95% 置信区间</div><div class="stat-sub" id="ciSub">转化 ≥ 5 时计算</div></div>
 </div>
 <div id="conclusionArea"><div class="conclusion insufficient">⏳ 等待足够数据（建议每组 ≥ 30 用户）</div></div>
+
+<!-- ===== AI 解释（可选，需用户自填 Key） ===== -->
+<div id="aiPanelWrap" style="margin-top:16px;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button onclick="AIUI.toggle()" id="aiToggleBtn" style="padding:8px 15px;border-radius:8px;cursor:pointer;
+                font-family:inherit;font-size:13px;background:rgba(129,140,248,.14);
+                color:var(--text-primary);border:1px solid var(--border);">
+            🤖 AI 解释结果
+        </button>
+        <span id="aiHint" style="font-size:12px;color:var(--text-dim);">可选功能 · 需自填 API Key · 不填则完全不启用</span>
+    </div>
+    <div id="aiBox" style="display:none;margin-top:12px;">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <button onclick="AIUI.explain()" id="aiRunBtn" style="padding:7px 14px;border-radius:7px;cursor:pointer;
+                    font-family:inherit;font-size:12.5px;background:rgba(52,211,153,.16);
+                    color:var(--accent-green);border:1px solid rgba(52,211,153,.35);">▶ 生成解释</button>
+            <button onclick="AIUI.showPreview()" style="padding:7px 14px;border-radius:7px;cursor:pointer;
+                    font-family:inherit;font-size:12.5px;background:transparent;
+                    color:var(--text-sec);border:1px solid var(--border);">👁 预览将发送的数据</button>
+            <button onclick="AIUI.toggleSettings()" style="padding:7px 14px;border-radius:7px;cursor:pointer;
+                    font-family:inherit;font-size:12.5px;background:transparent;
+                    color:var(--text-sec);border:1px solid var(--border);">⚙ 设置</button>
+        </div>
+        <div id="aiSettings"></div>
+        <div id="aiPreview" style="display:none;margin-bottom:12px;"></div>
+        <div id="aiOutput" style="display:none;padding:16px 18px;background:var(--panel);
+             border:1px solid var(--border);border-radius:10px;font-size:13.5px;
+             line-height:1.75;color:var(--text-sec);white-space:pre-wrap;"></div>
+    </div>
+</div>
 </div>
 
 <!-- ④ 样本量估算 -->
@@ -297,7 +328,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 <div class="modal-title">🧪 Y-Exp <span class="hl">实验评估框架</span></div>
 <div class="modal-sub">面向算法策略迭代的轻量级离线实验验证平台 · v2.0</div>
 <div class="modal-section"><h4>🎯 设计目标</h4><p>为算法/策略迭代提供科学、可追溯的离线验证环境，回答：<b style="color:var(--accent-amber);">“这次改进是否真的有效？”</b></p></div>
-<div class="modal-section"><h4>⚡ 核心能力</h4><ul><li><b>用户分流</b> — 确定性哈希分流</li><li><b>转化追踪</b> — 实时记录用户行为</li><li><b>统计检验</b> — z-test + 贝叶斯因子 BF₁₀</li><li><b>置信区间</b> — 95% CI 自动计算</li><li><b>收益估算</b> — 统计显著性 → 业务价值</li><li><b>样本量估算</b> — 实验前规划</li></ul></div>
+<div class="modal-section"><h4>⚡ 核心能力</h4><ul><li><b>用户分流</b> — 确定性哈希分流</li><li><b>转化追踪</b> — 实时记录用户行为</li><li><b>统计检验</b> — 两比例 z-test（pooled）＋ 贝叶斯 Beta-Binomial P(B&gt;A)</li><li><b>置信区间</b> — 95% CI 自动计算</li><li><b>收益估算</b> — 统计显著性 → 业务价值</li><li><b>样本量估算</b> — 实验前规划</li></ul></div>
 <div class="modal-section"><h4>🔬 应用场景</h4><ul><li>LLM 提示词工程效果对比</li><li>强化学习 (RL) 超参数调优验证</li><li>RAG 参数评估</li><li>推荐算法策略迭代</li></ul></div>
 <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-dim);">📦 纯前端 · localStorage · 零依赖</div>
 </div></div>
@@ -326,6 +357,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 </div>
 </div></div>
 
+<script src="src/stats.js"></script>
+<script src="src/llm.js"></script>
 <script src="src/trace.js"></script>
 <script src="assets/js/mock-api.js"></script>
 <script>
@@ -364,7 +397,7 @@ async function resetExperiment() {
             metric: metric,
             rateA: stats.rateA, rateB: stats.rateB,
             lift: stats.lift, pValue: stats.pValue,
-            bayesFactor: stats.bayesFactor, significant: stats.significant,
+            bayesFactor: stats.bayesFactor, probBBeatsA: stats.probBBeatsA, expectedLoss: stats.expectedLoss, significant: stats.significant,
             timestamp: Date.now(),
             usersA: stats.usersA, usersB: stats.usersB,
             convA: stats.convA, convB: stats.convB,
@@ -441,6 +474,7 @@ function calculateStats() {
     const rB = uB.length > 0 ? cB / uB.length : 0;
     const lift = rA > 0 ? (rB - rA) / rA : (rB > 0 ? 1 : 0);
     let pValue = null, ciLower = null, ciUpper = null, bayesFactor = null;
+    let probBBeatsA = null, expectedLoss = null, bayesRec = null;
     const nA = uA.length, nB = uB.length;
     if (nA >= 5 && nB >= 5 && cA > 0 && cB > 0) {
         const pPool = (cA + cB) / (nA + nB);
@@ -451,16 +485,22 @@ function calculateStats() {
         const margin = 1.96 * seDiff;
         ciLower = (rB - rA) - margin;
         ciUpper = (rB - rA) + margin;
-        const d = (rB - rA) / Math.sqrt((rA * (1 - rA) + rB * (1 - rB)) / 2);
-        const nEff = 1 / (1 / nA + 1 / nB);
-        bayesFactor = Math.exp(0.5 * d * d * nEff / (1 + nEff / 100));
-        bayesFactor = Math.min(bayesFactor, 100);
+        /* 贝叶斯：业界标准 Beta-Binomial，替换原自造 BF10 启发式
+         * 原实现被 min(...,100) 硬截断，样本 1500 与 5000 返回同一值，
+         * 违背证据随样本累积而增强的性质。现返回 P(B>A) + 期望损失。 */
+        const by = YStats.bayesianAB(nA, cA, nB, cB);
+        probBBeatsA   = by.probBBeatsA;
+        expectedLoss  = by.expectedLossChooseB;
+        bayesRec      = by.recommendation;
     }
     const significant = pValue !== null && pValue < 0.05 && lift > 0;
-    return { usersA: nA, usersB: nB, convA: cA, convB: cB, rateA: rA, rateB: rB, lift, pValue, ciLower, ciUpper, bayesFactor, significant };
+    return { usersA: nA, usersB: nB, convA: cA, convB: cB, rateA: rA, rateB: rB, lift, pValue, ciLower, ciUpper, bayesFactor, probBBeatsA, expectedLoss, bayesRec, significant };
 }
 
-function normalCDF(x) { const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911; const sign = x < 0 ? -1 : 1; x = Math.abs(x); const t = 1 / (1 + p * x); const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x / 2); return 0.5 * (1 + sign * (y - 0.5) * 2); }
+/* 原实现误用 A&S 7.1.26 系数（指数项写成 exp(-x²/2) 且漏 erf→Φ 换算），
+ * 导致 Φ(0)=0、z=1.96 时 p=0.076（应为 0.050），会把真实显著的结果误判为不显著。
+ * 现委托给 src/stats.js 的正确实现，保留函数名以兼容既有调用。 */
+function normalCDF(x) { return YStats.normalCDF(x); }
 
 function calcSampleSize() { const mde = parseFloat(document.getElementById('mdeInput').value) || 5; const baseline = parseFloat(document.getElementById('baselineInput').value) || 40; if (mde <= 0 || baseline <= 0 || baseline >= 100) { document.getElementById('sampleResult').textContent = '⚠️ 请输入有效值'; return; } const p1 = baseline / 100; const p2 = p1 * (1 + mde / 100); const pPool = (p1 + p2) / 2; const zAlpha = 1.96, zBeta = 0.84; const num = 2 * pPool * (1 - pPool) * Math.pow(zAlpha + zBeta, 2); const den = Math.pow(p2 - p1, 2); const n = Math.ceil(num / den); document.getElementById('sampleResult').textContent = n + ' 人'; }
 
@@ -483,7 +523,21 @@ function updateUI() {
     document.getElementById('detailB').textContent = s.convB + ' / ' + s.usersB;
     if (s.usersA > 0 && s.usersB > 0) { const lp = s.lift * 100; animateStat('lift', (lp > 0 ? '+' : '') + lp.toFixed(1) + '%'); document.getElementById('liftSub').textContent = s.lift > 0 ? 'B 组优于 A 组' : (s.lift < 0 ? 'A 组优于 B 组' : '无差异'); } else { document.getElementById('lift').textContent = '--'; document.getElementById('liftSub').textContent = '等待数据'; }
     if (s.pValue !== null) { animateStat('pValue', s.pValue.toFixed(4)); document.getElementById('pSub').textContent = s.pValue < 0.05 ? '✅ 统计显著' : '❌ 不显著'; } else { document.getElementById('pValue').textContent = '--'; document.getElementById('pSub').textContent = '样本 ≥ 5 时计算'; }
-    if (s.bayesFactor !== null) { const bf = s.bayesFactor; animateStat('bayesFactor', bf.toFixed(1)); const lbl = bf > 10 ? '💪 强证据支持 H₁' : bf > 3 ? '👍 中等证据' : '🤔 弱证据'; document.getElementById('bayesSub').textContent = lbl; } else { document.getElementById('bayesFactor').textContent = '--'; document.getElementById('bayesSub').textContent = '数据支持 H₁ 的程度'; }
+    if (s.probBBeatsA !== null) {
+        const p = s.probBBeatsA;
+        animateStat('bayesFactor', (p * 100).toFixed(1) + '%');
+        let lbl;
+        if (p > 0.99) lbl = '💪 极强证据，可选 B';
+        else if (p > 0.95) lbl = '👍 强证据，倾向 B';
+        else if (p > 0.80) lbl = '🤔 弱证据，继续观察';
+        else if (p > 0.20) lbl = '⏸️ 无差异，不足以决策';
+        else lbl = '⚠️ 倾向 A，慎选 B';
+        if (s.expectedLoss !== null && s.expectedLoss < 0.0005 && p > 0.95) lbl += ' · 期望损失极小';
+        document.getElementById('bayesSub').textContent = lbl;
+    } else {
+        document.getElementById('bayesFactor').textContent = '--';
+        document.getElementById('bayesSub').textContent = '贝叶斯后验概率';
+    }
     if (s.ciLower !== null && s.ciUpper !== null) { document.getElementById('ciDisplay').textContent = (s.ciLower * 100).toFixed(1) + '% ~ ' + (s.ciUpper * 100).toFixed(1) + '%'; document.getElementById('ciSub').textContent = '提升率 95% 置信区间'; } else { document.getElementById('ciDisplay').textContent = '--'; document.getElementById('ciSub').textContent = '转化 ≥ 5 时计算'; }
     const vpc = parseFloat(document.getElementById('valuePerConv').value) || 100; const revA = s.convA * vpc, revB = s.convB * vpc; document.getElementById('expectedRevenue').textContent = '¥' + (revB - revA).toFixed(0);
     const c = document.getElementById('conclusionArea');
@@ -554,7 +608,7 @@ function closeAbout() { document.getElementById('aboutModal').classList.remove('
 function exportReport() {
     const s = calculateStats(), n = document.getElementById('expName').value || '未命名实验', m = document.getElementById('expMetric').value || '核心指标', now = new Date().toISOString().slice(0, 10);
     const msContext = data.msContext ? '\n\n## MindSpeak 结构验证上下文\n- 状态：已验证通过\n- 映射数：7/7\n- 平均置信度：0.92\n- 三角审计：通过\n' : '';
-    const report = '# Y-Exp 实验报告\n\n## 实验信息\n- **实验名称**：' + n + '\n- **核心指标**：' + m + '\n- **报告日期**：' + now + '\n- **实验时长**：' + Math.floor((Date.now() - data.startTime) / 60000) + ' 分钟\n\n## 实验配置\n- **A 组流量**：' + data.trafficA + '%\n- **B 组流量**：' + data.trafficB + '%\n- **总样本量**：' + data.users.length + ' 人\n\n## 实验结果\n| 指标 | A 组 | B 组 |\n|------|------|------|\n| 样本量 | ' + s.usersA + ' | ' + s.usersB + ' |\n| 转化数 | ' + s.convA + ' | ' + s.convB + ' |\n| 转化率 | ' + (s.rateA * 100).toFixed(2) + '% | ' + (s.rateB * 100).toFixed(2) + '% |\n\n## 统计检验\n- **相对提升**：' + (s.lift * 100).toFixed(2) + '%\n- **p-value**：' + (s.pValue !== null ? s.pValue.toFixed(4) : '--') + '\n- **贝叶斯因子 BF₁₀**：' + (s.bayesFactor !== null ? s.bayesFactor.toFixed(2) : '--') + '\n- **95% 置信区间**：' + (s.ciLower !== null ? (s.ciLower * 100).toFixed(2) + '% ~ ' + (s.ciUpper * 100).toFixed(2) + '%' : '--') + '\n\n## 结论\n' + (s.significant ? '✅ 统计显著，建议全量推送变体 B' : '⏸️ 结果不显著，建议延长实验或调整样本量') + msContext + '\n\n---\n*报告由 Y-Exp 自动生成 · Y.Mine Labs*';
+    const report = '# Y-Exp 实验报告\n\n## 实验信息\n- **实验名称**：' + n + '\n- **核心指标**：' + m + '\n- **报告日期**：' + now + '\n- **实验时长**：' + Math.floor((Date.now() - data.startTime) / 60000) + ' 分钟\n\n## 实验配置\n- **A 组流量**：' + data.trafficA + '%\n- **B 组流量**：' + data.trafficB + '%\n- **总样本量**：' + data.users.length + ' 人\n\n## 实验结果\n| 指标 | A 组 | B 组 |\n|------|------|------|\n| 样本量 | ' + s.usersA + ' | ' + s.usersB + ' |\n| 转化数 | ' + s.convA + ' | ' + s.convB + ' |\n| 转化率 | ' + (s.rateA * 100).toFixed(2) + '% | ' + (s.rateB * 100).toFixed(2) + '% |\n\n## 统计检验\n- **相对提升**：' + (s.lift * 100).toFixed(2) + '%\n- **p-value**：' + (s.pValue !== null ? s.pValue.toFixed(4) : '--') + '\n- **B 优于 A 概率 P(B>A)**：' + (s.probBBeatsA !== null ? (s.probBBeatsA * 100).toFixed(1) + '%' : '--') + '\n- **选 B 期望损失**：' + (s.expectedLoss !== null ? s.expectedLoss.toExponential(2) : '--') + '\n- **95% 置信区间**：' + (s.ciLower !== null ? (s.ciLower * 100).toFixed(2) + '% ~ ' + (s.ciUpper * 100).toFixed(2) + '%' : '--') + '\n\n## 结论\n' + (s.significant ? '✅ 统计显著，建议全量推送变体 B' : '⏸️ 结果不显著，建议延长实验或调整样本量') + msContext + '\n\n---\n*报告由 Y-Exp 自动生成 · Y.Mine Labs*';
     const blob = new Blob([report], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -939,6 +993,79 @@ window.closeMindSpeakDetail = closeMindSpeakDetail;
 window.exportMindSpeakContext = exportMindSpeakContext;
 window.applyMindSpeakContext = applyMindSpeakContext;
 window.toggleStepDetail = toggleStepDetail;
+</script>
+
+<script>
+/* ---- AI 解释面板 ---- */
+var AIUI = (function () {
+    var open = false;
+    function box() { return document.getElementById('aiBox'); }
+    function out() { return document.getElementById('aiOutput'); }
+
+    function toggle() {
+        open = !open;
+        box().style.display = open ? 'block' : 'none';
+        document.getElementById('aiToggleBtn').textContent = open ? '🤖 收起 AI 解释' : '🤖 AI 解释结果';
+        if (open && typeof YLLM !== 'undefined' && !YLLM.isEnabled()) {
+            /* 首次打开且未配置 -> 直接展开设置 */
+            toggleSettings();
+        }
+    }
+
+    function explain() {
+        var o = out();
+        if (typeof YLLM === 'undefined') { alert('AI 模块未加载'); return; }
+        if (!YLLM.isEnabled()) {
+            o.style.display = 'block';
+            o.innerHTML = '<span style="color:var(--accent-amber)">⚠️ 尚未配置 API Key。</span>' +
+                          '<br>请点「⚙ 设置」填写。Key 只存在你浏览器的 localStorage，请求从浏览器直发。' +
+                          '<br><span style="color:var(--text-dim);font-size:12px">不填则此功能完全不启用，不影响其他功能。</span>';
+            return;
+        }
+        var btn = document.getElementById('aiRunBtn');
+        btn.disabled = true; btn.textContent = '⏳ 生成中…';
+        o.style.display = 'block';
+        o.textContent = '正在请求 AI 解释…（所有数值均由本地计算，AI 仅做解读）';
+
+        YLLM.explain(calculateStats(), function (res) {
+            btn.disabled = false; btn.textContent = '▶ 重新生成';
+            if (res.ok) {
+                o.textContent = res.text;
+            } else {
+                o.innerHTML = '<span style="color:var(--accent-red)">❌ 请求失败：' +
+                              String(res.error).replace(/</g, '&lt;') + '</span>' +
+                              '<br><br><span style="color:var(--text-dim);font-size:12.5px">' +
+                              '常见原因：Key 无效、余额不足、网络不通、或该模型不支持此接口。' +
+                              '统计数据本身不受影响，仍以本地计算为准。</span>';
+            }
+        });
+    }
+
+    function showPreview() {
+        var pv = document.getElementById('aiPreview');
+        if (pv.style.display === 'none') {
+            if (typeof YLLM === 'undefined') return;
+            pv.style.display = 'block';
+            pv.innerHTML = '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">' +
+                           '以下是将发送给 AI 的全部内容（不含你的 Key）：</div>' +
+                           '<pre style="padding:12px 14px;background:rgba(0,0,0,.3);border-radius:8px;' +
+                           'font-size:11.5px;line-height:1.6;color:var(--text-sec);overflow-x:auto;' +
+                           'max-height:280px;overflow-y:auto;margin:0">' +
+                           String(YLLM.preview(calculateStats())).replace(/</g, '&lt;') +
+                           '</pre>';
+        } else {
+            pv.style.display = 'none';
+        }
+    }
+
+    function toggleSettings() {
+        var st = document.getElementById('aiSettings');
+        if (st.innerHTML) { st.innerHTML = ''; return; }
+        if (typeof YLLM !== 'undefined') YLLM.renderSettings('#aiSettings');
+    }
+
+    return { toggle: toggle, explain: explain, showPreview: showPreview, toggleSettings: toggleSettings };
+})();
 </script>
 </body>
 </html>
