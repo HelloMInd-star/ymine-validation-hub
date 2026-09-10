@@ -117,6 +117,7 @@
     <a class="tree-item lv2" href="#start">五分钟上手</a>
     <a class="tree-item lv1" href="#manual">实验手册</a>
     <a class="tree-item lv2" href="#m-ab">A/B 实验评估台</a>
+    <a class="tree-item lv2" href="#m-import">导入你自己的数据</a>
     <a class="tree-item lv2" href="#m-entropy">状态判定实验台</a>
     <a class="tree-item lv2" href="#m-osc">归一收敛模拟器</a>
     <a class="tree-item lv2" href="#m-vec">向量检索实验室</a>
@@ -223,6 +224,33 @@
         <li><strong>p 值 &lt; 0.05</strong> —— 说明差异不太可能是随机波动造成的</li>
         <li><strong>P(B&gt;A) &gt; 95%</strong> 且 <strong>期望损失 &lt; 0.0005</strong> —— 说明选 B 的实际风险足够小</li>
       </ul>
+    </div>
+
+    <h3 id="m-import">📤 导入你自己的数据 <span class="badge new">实用化</span></h3>
+    <p>点「📤 导入数据」，可以导入 CSV 或 JSON。<strong>文件在你的浏览器里解析，不上传到任何服务器。</strong></p>
+    <table>
+      <tr><th style="width:130px">格式</th><th>示例</th></tr>
+      <tr>
+        <td>用户级明细</td>
+        <td><code>uid,group,converted</code><br><code>u1,A,1</code>　<code>u2,A,0</code>　<code>u3,B,1</code></td>
+      </tr>
+      <tr>
+        <td>分组汇总</td>
+        <td><code>group,visitors,conversions</code><br><code>A,2000,100</code>　<code>B,2000,125</code></td>
+      </tr>
+      <tr>
+        <td>完整 JSON</td>
+        <td>本仓库导出的 <code>data</code> 结构，或 <code>{A:{visitors,conversions}, B:{...}}</code></td>
+      </tr>
+    </table>
+    <p>表头支持中英文与常见别名（<code>用户ID</code> / <code>分组</code> / <code>是否转化</code>、
+    <code>control</code> / <code>treatment</code> 都能识别）。导入后会先显示摘要让你确认，确认后才覆盖当前数据。</p>
+    <div class="card ok">
+      <strong>会用这个，它才是工具；不会用，它只是个演示。</strong>
+      <p style="margin:8px 0 0;font-size:13.5px">
+        在此之前，这个页面只能生成随机假数据——跑出来的结论对真实业务没有任何意义。
+        导入真实数据后，统计检验的结果才是可信的。
+      </p>
     </div>
 
     <h3 id="m-entropy">⚙️ 状态判定实验台</h3>
@@ -453,6 +481,9 @@
       已经不用了。配色现在集中在 <code>src/theme.css</code>，一处改全站生效；
       页面命名集中在 <code>src/shell.js</code> 的 <code>NAMES</code> 表。
     </p>
+
+    <h4>导入的数据安全吗？</h4>
+    <p>安全。CSV/JSON 通过 FileReader 在浏览器本地解析，全程不经过网络。你的 API Key（如果填了）也只存在本地 localStorage。</p>
 
     <h4>还需要联网吗？</h4>
     <p>

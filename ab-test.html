@@ -241,7 +241,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 
 <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
 <button class="btn btn-success" onclick="resetExperiment()">🔄 重置实验</button>
-<button class="btn btn-outline" onclick="loadExampleData()">📥 加载示例</button>
+<button class="btn btn-outline" onclick="DataUI.open()">📤 导入数据</button>
+<button class="btn btn-outline" onclick="DataUI.exportMenu()">📥 导出</button>
+<button class="btn btn-outline" onclick="loadExampleData()">🎲 随机示例</button>
 <button class="btn btn-outline btn-sm" onclick="clearAllData()" style="color:var(--accent-red);border-color:rgba(239,68,68,0.3);">🗑️ 清空</button>
 <span style="font-size:11px;color:var(--text-dim);align-self:center;margin-left:auto;" id="timerDisplay">⏱ 运行中: 00:00</span>
 </div></div>
@@ -275,6 +277,51 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 <div class="stat-card" style="border-color:rgba(167,139,250,0.1);"><div class="stat-value" style="color:var(--accent-purple);font-size:16px;" id="ciDisplay">--</div><div class="stat-label">95% 置信区间</div><div class="stat-sub" id="ciSub">转化 ≥ 5 时计算</div></div>
 </div>
 <div id="conclusionArea"><div class="conclusion insufficient">⏳ 等待足够数据（建议每组 ≥ 30 用户）</div></div>
+
+<!-- ===== 数据导入面板 ===== -->
+<div id="dataPanel" style="display:none;margin-top:14px;padding:16px 18px;background:var(--panel);
+     border:1px solid var(--border);border-radius:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <h4 style="margin:0;color:var(--accent-blue);font-size:14px">📤 导入你自己的数据</h4>
+        <button onclick="DataUI.close()" style="background:none;border:none;color:var(--text-dim);
+                cursor:pointer;font-size:18px;line-height:1">×</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px">
+        文件在你的浏览器里解析，<b>不会上传到任何服务器</b>。支持 CSV 与 JSON，自动识别格式。
+    </p>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <input type="file" id="dataFileInput" accept=".csv,.json,.txt" style="display:none">
+        <button onclick="document.getElementById('dataFileInput').click()"
+                style="padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12.5px;
+                background:rgba(129,140,248,.18);color:var(--text-primary);border:1px solid var(--accent-purple)">
+            📁 选择文件
+        </button>
+        <button onclick="DataUI.togglePaste()"
+                style="padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12.5px;
+                background:transparent;color:var(--text-sec);border:1px solid var(--border)">
+            ✏️ 粘贴文本
+        </button>
+        <button onclick="DataUI.downloadTemplate()"
+                style="padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12.5px;
+                background:transparent;color:var(--text-sec);border:1px solid var(--border)">
+            📋 下载模板
+        </button>
+    </div>
+
+    <div id="dataPasteBox" style="display:none;margin-bottom:10px;">
+        <textarea id="dataPaste" rows="7" placeholder="uid,group,converted&#10;u1,A,1&#10;u2,A,0&#10;u3,B,1"
+                  style="width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,.3);
+                  color:var(--text-primary);border:1px solid var(--border);font-family:Consolas,monospace;
+                  font-size:12px;resize:vertical"></textarea>
+        <button onclick="DataUI.parsePaste()"
+                style="margin-top:7px;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit;
+                font-size:12.5px;background:rgba(52,211,153,.16);color:var(--accent-green);
+                border:1px solid rgba(52,211,153,.35)">▶ 解析</button>
+    </div>
+
+    <div id="dataResult" style="display:none;"></div>
+</div>
 
 <!-- ===== AI 解释（可选，需用户自填 Key） ===== -->
 <div id="aiPanelWrap" style="margin-top:16px;">
@@ -358,6 +405,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(180d
 </div></div>
 
 <script src="src/stats.js"></script>
+<script src="src/dataio.js"></script>
 <script src="src/llm.js"></script>
 <script src="src/trace.js"></script>
 <script src="assets/js/mock-api.js"></script>
@@ -1065,6 +1113,148 @@ var AIUI = (function () {
     }
 
     return { toggle: toggle, explain: explain, showPreview: showPreview, toggleSettings: toggleSettings };
+})();
+</script>
+
+<script>
+/* ---- 数据导入导出 ---- */
+var DataUI = (function () {
+    var pending = null;   /* 待确认的解析结果 */
+
+    function panel() { return document.getElementById('dataPanel'); }
+    function result() { return document.getElementById('dataResult'); }
+
+    function open() { panel().style.display = 'block'; result().style.display = 'none'; }
+    function close() { panel().style.display = 'none'; }
+
+    function togglePaste() {
+        var b = document.getElementById('dataPasteBox');
+        b.style.display = (b.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function downloadTemplate() {
+        YData.download('ab_template.csv',
+            YData.template() + '\n\n# 也支持汇总格式：\n# group,visitors,conversions\n# A,2000,100\n# B,2000,125',
+            'text/csv');
+    }
+
+    function showParsed(r, sourceName) {
+        var el = result();
+        el.style.display = 'block';
+        if (!r.ok) {
+            el.innerHTML = '<div style="padding:12px 14px;background:rgba(248,113,113,.1);' +
+                'border-left:3px solid var(--accent-red);border-radius:8px;font-size:13px">' +
+                '<b style="color:var(--accent-red)">❌ 解析失败</b><ul style="margin:7px 0 0;padding-left:20px">' +
+                r.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') +
+                '</ul></div>';
+            return;
+        }
+
+        /* 统计摘要 */
+        var d = r.data, nA = 0, nB = 0, cA = 0, cB = 0;
+        d.users.forEach(function (u) {
+            if (d.groups[u] === 'A') { nA++; if (d.conversions[u]) cA++; }
+            else if (d.groups[u] === 'B') { nB++; if (d.conversions[u]) cB++; }
+        });
+
+        var html = '<div style="padding:12px 14px;background:rgba(52,211,153,.08);' +
+            'border-left:3px solid var(--accent-green);border-radius:8px;font-size:13px">';
+        html += '<b style="color:var(--accent-green)">✅ 解析成功</b>';
+        html += '<span style="color:var(--text-dim);font-size:12px;margin-left:8px">';
+        html += '格式：' + (r.format === 'detail' ? '用户级明细' : r.format === 'summary' ? '分组汇总' : 'JSON') +
+                ' · 共 ' + r.rowCount + ' 个用户</span>';
+        html += '<table style="width:100%;margin-top:10px;font-size:12.5px;border-collapse:collapse">' +
+                '<tr><th style="text-align:left;padding:5px 8px;border-bottom:1px solid var(--border)">组</th>' +
+                '<th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--border)">样本</th>' +
+                '<th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--border)">转化</th>' +
+                '<th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--border)">转化率</th></tr>';
+        [['A', nA, cA], ['B', nB, cB]].forEach(function (g) {
+            var rate = g[1] ? (g[2] / g[1] * 100).toFixed(2) + '%' : '--';
+            html += '<tr><td style="padding:5px 8px;border-bottom:1px solid var(--border)">' + g[0] + ' 组</td>' +
+                    '<td style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--border)">' + g[1] + '</td>' +
+                    '<td style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--border)">' + g[2] + '</td>' +
+                    '<td style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--border)">' + rate + '</td></tr>';
+        });
+        html += '</table>';
+
+        if (r.warnings.length) {
+            html += '<div style="margin-top:10px;font-size:12px;color:var(--accent-amber)">⚠️ 提示：' +
+                    '<ul style="margin:5px 0 0;padding-left:20px;color:var(--text-dim)">' +
+                    r.warnings.slice(0, 4).map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') +
+                    (r.warnings.length > 4 ? '<li>…还有 ' + (r.warnings.length - 4) + ' 条</li>' : '') +
+                    '</ul></div>';
+        }
+
+        html += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
+                '<button onclick="DataUI.confirm()" style="padding:7px 15px;border-radius:7px;cursor:pointer;' +
+                'font-family:inherit;font-size:12.5px;background:rgba(52,211,153,.2);color:var(--accent-green);' +
+                'border:1px solid rgba(52,211,153,.4)">✓ 确认导入（覆盖当前数据）</button>' +
+                '<button onclick="DataUI.cancel()" style="padding:7px 15px;border-radius:7px;cursor:pointer;' +
+                'font-family:inherit;font-size:12.5px;background:transparent;color:var(--text-sec);' +
+                'border:1px solid var(--border)">取消</button></div>';
+        html += '</div>';
+        el.innerHTML = html;
+        pending = r.data;
+    }
+
+    function confirm() {
+        if (!pending) return;
+        var n = pending.users.length;
+        data = pending;
+        data.startTime = Date.now();
+        saveData();
+        logAction('📤 导入数据：' + n + ' 用户');
+        try {
+            if (window.YTrace) {
+                YTrace.log({ action: '导入外部数据', detail: n + ' 个用户，来源：文件导入',
+                             verdict: '已载入', level: 'ok' });
+            }
+        } catch (e) {}
+        updateUI();
+        pending = null;
+        close();
+    }
+
+    function cancel() { pending = null; result().style.display = 'none'; }
+
+    function parsePaste() {
+        var txt = document.getElementById('dataPaste').value;
+        showParsed(YData.parse(txt), '粘贴');
+    }
+
+    function exportMenu() {
+        var choice = confirm('导出格式：\n\n「确定」= 用户级明细 CSV（每行一个用户）\n「取消」= 分组汇总 CSV（每组一行）');
+        var fn = 'ab_export_' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv';
+        YData.download(fn, choice ? YData.toCSV(data) : YData.toSummaryCSV(data), 'text/csv');
+        logAction(choice ? '📥 导出明细 CSV' : '📥 导出汇总 CSV');
+    }
+
+    function esc(s) {
+        return String(s).replace(/[&<>"]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+    }
+
+    /* 文件选择 */
+    function bind() {
+        var inp = document.getElementById('dataFileInput');
+        if (!inp) return;
+        inp.addEventListener('change', function (e) {
+            var f = e.target.files && e.target.files[0];
+            if (!f) return;
+            YData.readFile(f, function (res) {
+                if (!res.ok) { showParsed({ ok: false, errors: [res.error], warnings: [] }); return; }
+                showParsed(YData.parse(res.text), f.name);
+            });
+            inp.value = '';   /* 允许重复选同一文件 */
+        });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+    else bind();
+
+    return { open: open, close: close, togglePaste: togglePaste, downloadTemplate: downloadTemplate,
+             parsePaste: parsePaste, confirm: confirm, cancel: cancel, exportMenu: exportMenu };
 })();
 </script>
 </body>
